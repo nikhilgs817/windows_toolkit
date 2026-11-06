@@ -35,11 +35,11 @@ $start = $native.IndexOf($marker) + $marker.Length
 $end = $native.IndexOf("`n" + [char]96 + ';', $start)
 if ($start -lt $marker.Length -or $end -lt 0) { throw 'Login helper markers missing' }
 Add-Type -TypeDefinition $native.Substring($start, $end - $start) -ReferencedAssemblies UIAutomationClient, UIAutomationTypes, WindowsBase
-Assert-Credential ([DailyOpsLogin]::UsernameIndex(@('Search', 'Username', 'Symbol')) -eq 1) 'username detection ignores search and symbol fields'
-Assert-Credential ([DailyOpsLogin]::UsernameIndex(@('Email', 'Username')) -eq -1) 'ambiguous username forms are rejected'
-Assert-Credential ([DailyOpsLogin]::UsernameIndex(@('Search', 'Verification code')) -eq -1) 'non-login forms are rejected'
-Assert-Credential ([DailyOpsLogin]::MatchesPath('C:\Apps\Sample.exe', 'c:\apps\SAMPLE.exe')) 'desktop executable identity matches the full path'
-Assert-Credential (-not [DailyOpsLogin]::MatchesPath('C:\Apps\Sample.exe', 'C:\Other\Sample.exe')) 'same executable name in another folder is rejected'
-Assert-Credential (-not [DailyOpsLogin]::MatchesPath('C:\Apps\Sample\launcher.exe', 'C:\Apps\Sample\jre\bin\javaw.exe')) 'a different runtime in the selected app folder is rejected'
-Assert-Credential (-not [DailyOpsLogin]::MatchesPath('', 'C:\Apps\Sample.exe')) 'an empty executable identity is rejected'
+Assert-Credential ([WinToolkitLogin]::UsernameIndex(@('Search', 'Username', 'Symbol')) -eq 1) 'username detection ignores search and symbol fields'
+Assert-Credential ([WinToolkitLogin]::UsernameIndex(@('Email', 'Username')) -eq -1) 'ambiguous username forms are rejected'
+Assert-Credential ([WinToolkitLogin]::UsernameIndex(@('Search', 'Verification code')) -eq -1) 'non-login forms are rejected'
+Assert-Credential ([WinToolkitLogin]::MatchesPath('C:\Apps\Sample.exe', 'c:\apps\SAMPLE.exe')) 'desktop executable identity matches the full path'
+Assert-Credential (-not [WinToolkitLogin]::MatchesPath('C:\Apps\Sample.exe', 'C:\Other\Sample.exe')) 'same executable name in another folder is rejected'
+Assert-Credential (-not [WinToolkitLogin]::MatchesPath('C:\Apps\Sample\launcher.exe', 'C:\Apps\Sample\jre\bin\javaw.exe')) 'a different runtime in the selected app folder is rejected'
+Assert-Credential (-not [WinToolkitLogin]::MatchesPath('', 'C:\Apps\Sample.exe')) 'an empty executable identity is rejected'
 $sample = $null; $protected = $null

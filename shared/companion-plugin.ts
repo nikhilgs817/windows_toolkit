@@ -1,5 +1,5 @@
 import streamDeck, { action, type KeyDownEvent } from "@elgato/streamdeck";
-import { DailyAction, REGISTRY, globals, type Appearance } from "./base.js";
+import { ToolkitAction, REGISTRY, globals, type Appearance } from "./base.js";
 import { PRESET_ICONS } from "./icons.js";
 import { connectCompanion, type CompanionConnection } from "./companion-routing.js";
 import { controlApp } from "./app-control.js";
@@ -21,7 +21,7 @@ export async function bootCompanion(config: CompanionConfig): Promise<void> {
 	for (const definition of config.commands) {
 		PRESET_ICONS["comp-" + definition.id] = { glyph: definition.glyph, theme: definition.theme, label: definition.name, style: "vivid" };
 		@action({ UUID: config.uuid + "." + definition.id })
-		class AppKey extends DailyAction<KeySettings> {
+		class AppKey extends ToolkitAction<KeySettings> {
 			protected readonly kind = "comp-" + definition.id;
 			override async onKeyDown(ev: KeyDownEvent<KeySettings>): Promise<void> {
 				try {

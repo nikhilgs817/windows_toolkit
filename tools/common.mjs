@@ -51,11 +51,12 @@ export function copyUi(sd) {
  * @param {{sd: string, uuid: string, pluginName: string, version: string, profile: string, title: string,
  *          layout: Record<string, string>, actions: string[][]}} o  profile = manifest name, e.g. "profiles/Apps"
  */
-export function buildProfile({ sd, uuid, pluginName, version, profile, title, layout, actions }) {
+export function buildProfile({ sd, uuid, pluginName, version, profile, title, layout, actions, pages }) {
 	const files = {};
 	const pid = randomUUID().toUpperCase();
-	const page = randomUUID();
 	const emptyPage = randomUUID();
+	const profilePages = pages || [{ name: "", layout }];
+	const pageIds = profilePages.map(() => randomUUID());
 	// 15-key Stream Deck model string (taken from a real MK.2 install); the manifest's DeviceType 0 targets all 15-key decks.
 	const model = process.env.SD_MODEL || "20GBL9901";
 	const put = (rel, obj) => {
@@ -66,26 +67,30 @@ export function buildProfile({ sd, uuid, pluginName, version, profile, title, la
 	put(`${base}/manifest.json`, {
 		Device: { Model: model, UUID: randomUUID() },
 		Name: title,
-		Pages: { Current: "00000000-0000-0000-0000-000000000000", Default: emptyPage, Pages: [page] },
+		Pages: { Current: "00000000-0000-0000-0000-000000000000", Default: emptyPage, Pages: pageIds },
 		Version: "3.0",
 	});
-	const keys = {};
-	for (const [pos, id] of Object.entries(layout)) {
-		const def = actions.find((a) => a[0] === id);
-		if (!def) throw new Error(`layout uses unknown action ${id}`);
-		keys[pos] = {
-			ActionID: randomUUID(),
-			LinkedTitle: false,
-			Name: def[1],
-			Plugin: { Name: pluginName, UUID: uuid, Version: version },
-			Resources: null,
-			Settings: {},
-			State: 0,
-			States: [{ FontFamily: "", FontSize: 12, FontStyle: "", FontUnderline: false, OutlineThickness: 2, ShowTitle: false, TitleAlignment: "bottom", TitleColor: "#ffffff" }],
-			UUID: `${uuid}.${id}`,
-		};
+	for (const [index, pageDefinition] of profilePages.entries()) {
+		const keys = {};
+		// A layout value is an action id, or [action id, key settings].
+		for (const [pos, value] of Object.entries(pageDefinition.layout)) {
+			const [id, settings] = Array.isArray(value) ? value : [value, {}];
+			const def = actions.find((a) => a[0] === id);
+			if (!def) throw new Error(`layout uses unknown action ${id}`);
+			keys[pos] = {
+				ActionID: randomUUID(),
+				LinkedTitle: false,
+				Name: def[1],
+				Plugin: { Name: pluginName, UUID: uuid, Version: version },
+				Resources: null,
+				Settings: settings,
+				State: 0,
+				States: [{ FontFamily: "", FontSize: 12, FontStyle: "", FontUnderline: false, OutlineThickness: 2, ShowTitle: false, TitleAlignment: "bottom", TitleColor: "#ffffff" }],
+				UUID: `${uuid}.${id}`,
+			};
+		}
+		put(`${base}/Profiles/${pageIds[index].toUpperCase()}/manifest.json`, { Controllers: [{ Actions: keys, Type: "Keypad" }], Icon: "", Name: pageDefinition.name || "" });
 	}
-	put(`${base}/Profiles/${page.toUpperCase()}/manifest.json`, { Controllers: [{ Actions: keys, Type: "Keypad" }], Icon: "", Name: "" });
 	put(`${base}/Profiles/${emptyPage.toUpperCase()}/manifest.json`, { Controllers: [{ Actions: null, Type: "Keypad" }], Icon: "", Name: "" });
 	const out = join(sd, `${profile}.streamDeckProfile`);
 	mkdirSync(dirname(out), { recursive: true });

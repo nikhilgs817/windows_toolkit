@@ -8,7 +8,7 @@ import { chromium } from "playwright";
 import { keySvg, monitorKeySvg, svgDataUri } from "../shared/icons.js";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const ui = join(root, "plugins/dailyops/com.dailyops.v2.sdPlugin/ui");
+const ui = join(root, "plugins/windowstoolkit/com.windowstoolkit.core.sdPlugin/ui");
 const output = join(root, "test-output");
 mkdirSync(output, { recursive: true });
 const server = createServer((req, res) => {
@@ -63,7 +63,7 @@ try {
 		};
 	}, { screens });
 	await page.goto(`http://127.0.0.1:${server.address().port}/pi.html`);
-	await page.evaluate(() => window.connectElgatoStreamDeckSocket(12345, "test-inspector", "registerPropertyInspector", "{}", JSON.stringify({ action: "com.dailyops.v2.monitorcontrol", payload: { settings: {} } })));
+	await page.evaluate(() => window.connectElgatoStreamDeckSocket(12345, "test-inspector", "registerPropertyInspector", "{}", JSON.stringify({ action: "com.windowstoolkit.core.monitorcontrol", payload: { settings: {} } })));
 	await page.waitForFunction(() => document.querySelectorAll("#screenPick option").length === 4);
 	assert.equal(await page.locator("#sec-screen").isVisible(), true);
 	assert.equal(await page.locator("#screenPick").inputValue(), "");
@@ -99,7 +99,7 @@ try {
 	console.log("PASS  unplugging a chosen monitor keeps that selection without falling back to another screen");
 	for (const id of ["screenshot", "showdesktop", "downloads", "appsfolder", "websitefolder", "website", "copy", "paste", "volup", "voldown", "back", "monitorcontrol", "app", "folder"]) {
 		await page.goto(`http://127.0.0.1:${server.address().port}/pi.html`);
-		await page.evaluate((id) => window.connectElgatoStreamDeckSocket(12345, "test-inspector", "registerPropertyInspector", "{}", JSON.stringify({ action: "com.dailyops.v2." + id, payload: { settings: {} } })), id);
+		await page.evaluate((id) => window.connectElgatoStreamDeckSocket(12345, "test-inspector", "registerPropertyInspector", "{}", JSON.stringify({ action: "com.windowstoolkit.core." + id, payload: { settings: {} } })), id);
 		await page.waitForSelector("#motionRow", { state: "visible" });
 		assert.equal(await page.locator("#animate").isChecked(), true);
 		const firstPhase = await page.locator('#preview rect[stroke-dashoffset]').getAttribute("stroke-dashoffset");
@@ -124,7 +124,7 @@ try {
 		console.log(`PASS  ${id}: live animation, Colourful/Vivid choices, and animation switch work`);
 	}
 	await page.goto(`http://127.0.0.1:${server.address().port}/pi.html`);
-	await page.evaluate(() => window.connectElgatoStreamDeckSocket(12345, "test-inspector", "registerPropertyInspector", "{}", JSON.stringify({ action: "com.dailyops.v2.downloads", payload: { settings: {} } })));
+	await page.evaluate(() => window.connectElgatoStreamDeckSocket(12345, "test-inspector", "registerPropertyInspector", "{}", JSON.stringify({ action: "com.windowstoolkit.core.downloads", payload: { settings: {} } })));
 	await page.waitForSelector("#sec-folder", { state: "visible" });
 	assert.doesNotMatch(await page.locator("#folderPath").getAttribute("placeholder"), /Leave empty|Downloads folder/);
 	assert.match(await page.locator("#folderHint").innerText(), /File Explorer.*Alt\+D.*copy the full path.*paste it above/);
@@ -154,7 +154,7 @@ try {
 	await page.screenshot({ path: join(output, "folders-settings.png"), fullPage: true });
 	console.log("PASS  all six new gradients can be selected in Colourful and Vivid with the Folders preview");
 	await page.goto(`http://127.0.0.1:${server.address().port}/pi.html`);
-	await page.evaluate(() => window.connectElgatoStreamDeckSocket(12345, "test-inspector", "registerPropertyInspector", "{}", JSON.stringify({ action: "com.dailyops.v2.app", payload: { settings: { appId: "fixture", appName: "Test App" } } })));
+	await page.evaluate(() => window.connectElgatoStreamDeckSocket(12345, "test-inspector", "registerPropertyInspector", "{}", JSON.stringify({ action: "com.windowstoolkit.core.app", payload: { settings: { appId: "fixture", appName: "Test App" } } })));
 	await page.waitForSelector("#sec-credentials", { state: "visible" });
 	assert.match(await page.locator("#sec-credentials").textContent(), /compatible desktop login form/);
 	assert.doesNotMatch(await page.locator("#sec-credentials").textContent(), /fidelity|thinkorswim/i);
@@ -204,7 +204,7 @@ try {
 	await page.goto(`http://127.0.0.1:${server.address().port}/pi.html`);
 	await page.evaluate(() => {
 		window.returnRealIcon = true;
-		window.connectElgatoStreamDeckSocket(12345, "test-inspector", "registerPropertyInspector", "{}", JSON.stringify({ action: "com.dailyops.v2.app", payload: { settings: { appId: "fixture", appName: "Test App" } } }));
+		window.connectElgatoStreamDeckSocket(12345, "test-inspector", "registerPropertyInspector", "{}", JSON.stringify({ action: "com.windowstoolkit.core.app", payload: { settings: { appId: "fixture", appName: "Test App" } } }));
 	});
 	await page.waitForSelector('#preview image[transform]');
 	const floating = await page.locator('#preview image').getAttribute('transform');
@@ -222,14 +222,14 @@ try {
 	assert.equal(await page.locator('#preview img').getAttribute('src'), custom);
 	console.log("PASS  custom-picture previews keep the full original picture with a moving frame, or the exact still picture when paused");
 	await page.goto(`http://127.0.0.1:${server.address().port}/pi.html`);
-	await page.evaluate(() => window.connectElgatoStreamDeckSocket(12345, 'test-inspector', 'registerPropertyInspector', '{}', JSON.stringify({ action: 'com.dailyops.vscode.v2.terminal', payload: { settings: {} } })));
+	await page.evaluate(() => window.connectElgatoStreamDeckSocket(12345, 'test-inspector', 'registerPropertyInspector', '{}', JSON.stringify({ action: 'com.windowstoolkit.vscode.terminal', payload: { settings: {} } })));
 	await page.waitForSelector('#motionRow', { state: 'visible' });
 	assert.equal(await page.locator('#styleSeg button[data-style="pro"]').getAttribute('class'), 'on');
 	const proPhase = await page.locator('#preview rect[stroke-dashoffset]').getAttribute('stroke-dashoffset');
 	await page.waitForFunction((before) => document.querySelector('#preview rect[stroke-dashoffset]')?.getAttribute('stroke-dashoffset') !== before, proPhase);
 	console.log("PASS  companion Pro previews animate with the same per-key controls");
 	await page.goto(`http://127.0.0.1:${server.address().port}/pi.html`);
-	await page.evaluate(() => window.connectElgatoStreamDeckSocket(12345, 'test-inspector', 'registerPropertyInspector', '{}', JSON.stringify({ action: 'com.dailyops.v2.websitefolder', payload: { settings: {} } })));
+	await page.evaluate(() => window.connectElgatoStreamDeckSocket(12345, 'test-inspector', 'registerPropertyInspector', '{}', JSON.stringify({ action: 'com.windowstoolkit.core.websitefolder', payload: { settings: {} } })));
 	await page.waitForSelector('#sec-websites', { state: 'visible' });
 	assert.equal(await page.locator('#sec-folder').isVisible(), false);
 	assert.equal(await page.locator('#sec-website').isVisible(), false);

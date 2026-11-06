@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 
 // User-approved Windows toolkit artwork. Preserve the original alpha while resizing at build time.
-const master = readFileSync(new URL("./assets/windows-daily-toolkit-master.png", import.meta.url));
+const master = readFileSync(new URL("./assets/windows-toolkit-master.png", import.meta.url));
 export function toolkitLogoSvg(size = 512) {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 1280 1280"><image width="1280" height="1280" href="data:image/png;base64,${master.toString("base64")}"/></svg>`;
 }

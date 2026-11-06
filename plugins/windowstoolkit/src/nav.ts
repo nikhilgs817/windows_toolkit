@@ -26,7 +26,7 @@ export function companionFor(kind: string, s: { appName?: string; appId?: string
 
 /** Is that companion plugin installed next to this one? (Deep links to a missing plugin would do nothing.) */
 export function companionInstalled(uuid: string): boolean {
-	if (process.env.DAILYOPS_DRYRUN === "1") return true;
+	if (process.env.WINTOOLKIT_DRYRUN === "1") return true;
 	const pluginsDir = join(dirname(process.argv[1] ?? ""), "..", "..");
 	return existsSync(join(pluginsDir, `${uuid}.sdPlugin`));
 }
@@ -67,6 +67,17 @@ async function openCollection(deviceId: string, profile: string): Promise<void> 
 	await streamDeck.profiles.switchToProfile(deviceId, profile);
 	inAppsPage.add(deviceId);
 	log.info(`${profile} on ${deviceId}`);
+	await tellCompanions("hold", deviceId);
+}
+
+/** Windows Toolkit persona profiles (Core, Developer, Podcast, Gaming, Trading), optionally at a page. */
+export async function openProfilePage(deviceId: string, name: string, page = 0): Promise<void> {
+	await manager?.restore(deviceId);
+	// Leave first, so Stream Deck still remembers the main keys as the place Back returns to.
+	if (inAppsPage.has(deviceId)) { await leaveApps(deviceId, false); await new Promise((r) => setTimeout(r, 60)); }
+	await streamDeck.profiles.switchToProfile(deviceId, `profiles/${name}`, page);
+	inAppsPage.add(deviceId);
+	log.info(`profiles/${name} page ${page + 1} on ${deviceId}`);
 	await tellCompanions("hold", deviceId);
 }
 

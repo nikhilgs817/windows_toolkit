@@ -1,7 +1,7 @@
 import streamDeck, { action, type Action, type DidReceiveSettingsEvent, type KeyDownEvent, type KeyUpEvent, type WillAppearEvent, type WillDisappearEvent } from "@elgato/streamdeck";
 import {
 	APP_PRESETS,
-	DailyAction,
+	ToolkitAction,
 	GestureAction,
 	LaunchAction,
 	launchApp,
@@ -64,7 +64,7 @@ abstract class AppAction extends LaunchAction<AppSettings> {
 }
 
 /** "Open App": the user picks any installed app (and its icon) in the settings panel. */
-@action({ UUID: "com.dailyops.v2.app" })
+@action({ UUID: "com.windowstoolkit.core.app" })
 export class OpenAppAction extends AppAction {
 	protected readonly kind = "app";
 	protected override preset(): AppPreset | undefined {
@@ -101,7 +101,7 @@ function folderName(s: FolderSettings): string | undefined {
 	return p ? p.split(/[\\/]/).pop()?.replace(/%/g, "") || p : undefined;
 }
 
-@action({ UUID: "com.dailyops.v2.downloads" })
+@action({ UUID: "com.windowstoolkit.core.downloads" })
 export class DownloadsAction extends FolderActionBase {
 	// Retain the original UUID so installed keys become Folders without replacement.
 	protected readonly kind = "downloads";
@@ -112,7 +112,7 @@ export class DownloadsAction extends FolderActionBase {
 }
 
 /** "Open Folder": any folder path, with its own icon. */
-@action({ UUID: "com.dailyops.v2.folder" })
+@action({ UUID: "com.windowstoolkit.core.folder" })
 export class OpenFolderAction extends FolderActionBase {
 	protected readonly kind = "folder";
 	protected readonly defaultPath = "";
@@ -145,7 +145,7 @@ abstract class WebsiteBase extends LaunchAction<WebsiteSettings> {
 	}
 }
 
-@action({ UUID: "com.dailyops.v2.website" })
+@action({ UUID: "com.windowstoolkit.core.website" })
 export class WebsiteAction extends WebsiteBase {
 	protected readonly kind = "website";
 	protected readonly defaultUrl = "";
@@ -162,7 +162,7 @@ export class WebsiteAction extends WebsiteBase {
 
 /* ------------------------------------------------------------------ volume */
 
-abstract class VolumeBase extends DailyAction<VolumeSettings> {
+abstract class VolumeBase extends ToolkitAction<VolumeSettings> {
 	protected abstract readonly direction: "up" | "down";
 	#timers = new Map<string, { delay?: NodeJS.Timeout; repeat?: NodeJS.Timeout; busy: boolean }>();
 
@@ -217,12 +217,12 @@ abstract class VolumeBase extends DailyAction<VolumeSettings> {
 	}
 }
 
-@action({ UUID: "com.dailyops.v2.volup" })
+@action({ UUID: "com.windowstoolkit.core.volup" })
 export class VolumeUpAction extends VolumeBase {
 	protected readonly kind = "volup";
 	protected readonly direction = "up";
 }
-@action({ UUID: "com.dailyops.v2.voldown" })
+@action({ UUID: "com.windowstoolkit.core.voldown" })
 export class VolumeDownAction extends VolumeBase {
 	protected readonly kind = "voldown";
 	protected readonly direction = "down";
@@ -231,7 +231,7 @@ export class VolumeDownAction extends VolumeBase {
 /* ------------------------------------------------------------------ screenshot */
 
 /** Screenshot: tap = select an area, double-tap = the active window, hold = all screens. */
-@action({ UUID: "com.dailyops.v2.screenshot" })
+@action({ UUID: "com.windowstoolkit.core.screenshot" })
 export class ScreenshotAction extends GestureAction<ScreenshotSettings> {
 	protected readonly kind = "screenshot";
 	protected override readonly defaultHold = 1;
@@ -262,8 +262,8 @@ export class ScreenshotAction extends GestureAction<ScreenshotSettings> {
 
 /* ------------------------------------------------------------------ show desktop */
 
-@action({ UUID: "com.dailyops.v2.showdesktop" })
-export class ShowDesktopAction extends DailyAction<Appearance> {
+@action({ UUID: "com.windowstoolkit.core.showdesktop" })
+export class ShowDesktopAction extends ToolkitAction<Appearance> {
 	protected readonly kind = "showdesktop";
 	override async onKeyDown(ev: KeyDownEvent<Appearance>): Promise<void> {
 		await this.feedback(ev.action, await ps.run("desktop"), false);
@@ -277,8 +277,8 @@ export class ShowDesktopAction extends DailyAction<Appearance> {
  * It shows what a press will do — red "TURN OFF" while the screen is on, green "TURN ON" while it is off.
  * Off = put the monitor to sleep (DDC/CI) and disconnect it in Windows; on = reconnect and wake it.
  */
-@action({ UUID: "com.dailyops.v2.monitorcontrol" })
-export class MonitorControlAction extends DailyAction<MonitorSettings> {
+@action({ UUID: "com.windowstoolkit.core.monitorcontrol" })
+export class MonitorControlAction extends ToolkitAction<MonitorSettings> {
 	protected readonly kind = "monitorcontrol";
 	#settings = new Map<string, MonitorSettings>();
 	#unwatch?: () => void;
@@ -374,8 +374,8 @@ export class MonitorControlAction extends DailyAction<MonitorSettings> {
 /* ------------------------------------------------------------------ apps folder */
 
 /** Apps: switches the deck to the Apps page (a bundled, editable layout with a Back key). */
-@action({ UUID: "com.dailyops.v2.appsfolder" })
-export class AppsFolderAction extends DailyAction<Appearance> {
+@action({ UUID: "com.windowstoolkit.core.appsfolder" })
+export class AppsFolderAction extends ToolkitAction<Appearance> {
 	protected readonly kind = "appsfolder";
 	override async onKeyDown(ev: KeyDownEvent<Appearance>): Promise<void> {
 		try {
@@ -387,8 +387,8 @@ export class AppsFolderAction extends DailyAction<Appearance> {
 }
 
 /** Website Folder: plugin-owned editable collection, using the approved folder/globe artwork. */
-@action({ UUID: "com.dailyops.v2.websitefolder" })
-export class WebsiteFolderAction extends DailyAction<Appearance> {
+@action({ UUID: "com.windowstoolkit.core.websitefolder" })
+export class WebsiteFolderAction extends ToolkitAction<Appearance> {
 	protected readonly kind = "websitefolder";
 	override async onKeyDown(ev: KeyDownEvent<Appearance>): Promise<void> {
 		try { await openWebsites(ev.action.device.id); }
@@ -397,8 +397,8 @@ export class WebsiteFolderAction extends DailyAction<Appearance> {
 }
 
 /** Back: returns to the main keys (top-left of the Apps page). */
-@action({ UUID: "com.dailyops.v2.back" })
-export class BackAction extends DailyAction<Appearance> {
+@action({ UUID: "com.windowstoolkit.core.back" })
+export class BackAction extends ToolkitAction<Appearance> {
 	protected readonly kind = "back";
 	override onWillAppear(ev: WillAppearEvent<Appearance>): Promise<void> {
 		backKeyAppeared(ev.action.device.id);
@@ -415,19 +415,19 @@ export class BackAction extends DailyAction<Appearance> {
 
 /* ------------------------------------------------------------------ keyboard */
 
-abstract class KeyComboBase extends DailyAction<Appearance> {
+abstract class KeyComboBase extends ToolkitAction<Appearance> {
 	protected abstract readonly combo: string;
 	override async onKeyDown(ev: KeyDownEvent<Appearance>): Promise<void> {
 		await this.feedback(ev.action, await ps.run("keys", [this.combo]), false);
 	}
 }
 
-@action({ UUID: "com.dailyops.v2.copy" })
+@action({ UUID: "com.windowstoolkit.core.copy" })
 export class CopyAction extends KeyComboBase {
 	protected readonly kind = "copy";
 	protected readonly combo = "^c";
 }
-@action({ UUID: "com.dailyops.v2.paste" })
+@action({ UUID: "com.windowstoolkit.core.paste" })
 export class PasteAction extends KeyComboBase {
 	protected readonly kind = "paste";
 	protected readonly combo = "^v";

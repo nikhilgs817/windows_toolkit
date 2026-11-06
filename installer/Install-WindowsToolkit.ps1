@@ -8,9 +8,11 @@ param(
 )
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = 'Stop'
-$script:PluginId = 'com.dailyops.v2'
-$script:ReleaseVersion = '2.6.2.0'
-$script:ReleaseBase = 'https://github.com/nikhilgs817/windows_daily_toolkit/releases/download/v2.6.2'
+$script:PluginId = 'com.windowstoolkit.core'
+# Older names of this plugin. They are backed up and removed so Stream Deck does not show two copies.
+$script:RetiredPluginIds = @('com.dailyops.v2')
+$script:ReleaseVersion = '3.0.0.0'
+$script:ReleaseBase = 'https://github.com/nikhilgs817/windows_toolkit/releases/download/v3.0.0'
 $script:LogFile = $null
 
 function Write-Step([string]$Message) {
@@ -209,6 +211,20 @@ function Add-MissingProfiles([string]$PluginRoot, [string]$ProfilesRoot, $Manife
         }
     }
 }
+function Move-RetiredPlugins([string]$PluginsRoot, [string]$Backup) {
+    $moved = [Collections.Generic.List[object]]::new()
+    foreach ($id in $script:RetiredPluginIds) {
+        $old = Join-Path $PluginsRoot ($id + '.sdPlugin')
+        if (-not (Test-Path -LiteralPath $old)) { continue }
+        $null = Assert-ChildPath $old $PluginsRoot
+        $dest = Join-Path (Join-Path $Backup 'RetiredPlugins') ($id + '.sdPlugin')
+        $null = New-Item -ItemType Directory -Path (Split-Path -Parent $dest) -Force
+        Move-Item -LiteralPath $old -Destination $dest
+        $moved.Add([pscustomobject]@{ From = $old; To = $dest })
+        Write-Step ('Removed the old ' + $id + ' plugin (a copy is in the backup).')
+    }
+    return ,$moved
+}
 function Install-ToolkitPayload([string]$PayloadRoot, [string]$DataRoot, [string]$BackupRoot, [string]$Scratch, [scriptblock]$Restart, [scriptblock]$VerifyRuntime) {
     $manifest = Test-PluginPayload $PayloadRoot
     $pluginsRoot = Join-Path $DataRoot 'Plugins'
@@ -227,6 +243,7 @@ function Install-ToolkitPayload([string]$PayloadRoot, [string]$DataRoot, [string
     $created = [Collections.Generic.List[string]]::new()
     $hadPlugin = Test-Path -LiteralPath $installed
     $swapped = $false
+    $retired = $null
     try {
         Copy-Item -LiteralPath $PayloadRoot -Destination $candidate -Recurse
         if ($hadPlugin) {
@@ -241,6 +258,7 @@ function Install-ToolkitPayload([string]$PayloadRoot, [string]$DataRoot, [string
         try { Move-Item -LiteralPath $candidate -Destination $installed; $swapped = $true }
         catch { if (Test-Path -LiteralPath $previous) { Move-Item -LiteralPath $previous -Destination $installed }; throw }
         Add-MissingProfiles $installed $profilesRoot $manifest $Scratch $created
+        $retired = Move-RetiredPlugins $pluginsRoot $backup
         & $Restart
         & $VerifyRuntime $installed
         Test-InstalledFiles $PayloadRoot $installed
@@ -255,6 +273,7 @@ function Install-ToolkitPayload([string]$PayloadRoot, [string]$DataRoot, [string
         if ($swapped) { Remove-InstallFolder $installed $pluginsRoot }
         if (Test-Path -LiteralPath $previous) { Move-Item -LiteralPath $previous -Destination $installed }
         foreach ($profile in $created) { Remove-InstallFolder $profile $profilesRoot }
+        if ($retired) { foreach ($r in $retired) { if (-not (Test-Path -LiteralPath $r.From) -and (Test-Path -LiteralPath $r.To)) { Move-Item -LiteralPath $r.To -Destination $r.From } } }
         Write-Json (Join-Path $backup 'installation.json') ([ordered]@{ Version = $manifest.Version; Status = 'RolledBack'; HadPreviousPlugin = $hadPlugin })
         & $Restart
         throw ('Installation was rolled back. Your previous plugin and layouts were kept. ' + $failure.Exception.Message)
@@ -268,12 +287,12 @@ $deckExe = $null
 $deckWasStopped = $false
 try {
     if ([Environment]::OSVersion.Platform -ne [PlatformID]::Win32NT -or [Environment]::OSVersion.Version.Major -lt 10 -or -not [Environment]::Is64BitOperatingSystem) { throw 'Windows 10/11 64-bit is required.' }
-    $stateRoot = Join-Path $env:LOCALAPPDATA 'WindowsDailyToolkit'
+    $stateRoot = Join-Path $env:LOCALAPPDATA 'WindowsToolkit'
     $null = New-Item -ItemType Directory -Path (Join-Path $stateRoot 'Logs') -Force
     $script:LogFile = Join-Path $stateRoot ('Logs\install-' + (Get-Date -Format 'yyyyMMdd-HHmmss') + '.log')
-    $scratch = Join-Path ([IO.Path]::GetTempPath()) ('WindowsDailyToolkit-Install-' + [guid]::NewGuid().ToString('N'))
+    $scratch = Join-Path ([IO.Path]::GetTempPath()) ('WindowsToolkit-Install-' + [guid]::NewGuid().ToString('N'))
     $null = New-Item -ItemType Directory -Path $scratch
-    Write-Step ('Windows Daily Toolkit ' + $script:ReleaseVersion + ' installer')
+    Write-Step ('Windows Toolkit ' + $script:ReleaseVersion + ' installer')
     Write-Step '1/5 Checking the ready-made plugin package...'
     $bundleRoot = Split-Path -Parent $PSScriptRoot
     $metadataPath = Join-Path $bundleRoot 'installer-manifest.json'
@@ -311,10 +330,10 @@ try {
     $result = Install-ToolkitPayload $payload $dataRoot (Join-Path $stateRoot 'Backups') $scratch { $script:RuntimeStartUtc = [DateTimeOffset]::UtcNow; Start-DeckAfterInstall $deckExe } { param($root) Wait-ToolkitRuntime $root -StartedAfter $script:RuntimeStartUtc }
     $deckWasStopped = $false
     Write-Step '5/5 Stream Deck restarted and the plugin passed verification.'
-    Write-Step ('Installed Windows Daily Toolkit ' + $result.Version + '.')
+    Write-Step ('Installed Windows Toolkit ' + $result.Version + '.')
     Write-Step ('Backup: ' + $result.Backup)
     Write-Step 'Your existing button layouts and saved settings were kept.'
-    Write-Step 'Find Windows Daily Toolkit in the action list, or choose its starter profile from the profile list.'
+    Write-Step 'Find Windows Toolkit in the action list, or choose its starter profile from the profile list.'
     Write-Step 'If no compatible deck was detected, Stream Deck can offer its bundled layouts when first used.'
     exit 0
 } catch {

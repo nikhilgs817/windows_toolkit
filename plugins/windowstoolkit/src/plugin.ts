@@ -6,26 +6,29 @@ import { ps } from "../../../shared/ps.js";
 import { credentialBinding } from "../../../shared/credentials.js";
 import { ALL_ACTIONS } from "./actions.js";
 import { refreshScreens, screenNumber, screens } from "./screens.js";
-import { leaveApps, openWebsites } from "./nav.js";
+import { leaveApps, openProfilePage, openWebsites } from "./nav.js";
+import { makeFeatureActions, setPersonaOpener } from "./features.js";
 import { initCompanions } from "./companions.js";
 
 streamDeck.logger.setLevel("info");
 const log = streamDeck.logger.createScope("plugin");
 
 for (const A of ALL_ACTIONS) streamDeck.actions.registerAction(new A());
+for (const A of makeFeatureActions()) streamDeck.actions.registerAction(new A());
+setPersonaOpener((name, device, page) => openProfilePage(device, name, page));
 
 /** Settings panel ➜ plugin messages. */
 streamDeck.ui.onSendToPlugin<{ event?: string; settings?: JsonObject; password?: string; requestId?: string; binding?: string }>(async (ev) => {
 	const event = ev.payload?.event;
 	if (event === "openWebsites" || event === "returnMain") {
-		const required = event === "openWebsites" ? "com.dailyops.v2.websitefolder" : "com.dailyops.v2.back";
+		const required = event === "openWebsites" ? "com.windowstoolkit.core.websitefolder" : "com.windowstoolkit.core.back";
 		if (ev.action.manifestId !== required || streamDeck.ui.action?.id !== ev.action.id) return;
 		if (event === "openWebsites") await openWebsites(ev.action.device.id);
 		else await leaveApps(ev.action.device.id);
 		return;
 	}
 	if (event === "protectPassword" || event === "revealPassword") {
-		if (ev.action.manifestId !== "com.dailyops.v2.app" || streamDeck.ui.action?.id !== ev.action.id) return;
+		if (ev.action.manifestId !== "com.windowstoolkit.core.app" || streamDeck.ui.action?.id !== ev.action.id) return;
 		const requestId = ev.payload.requestId;
 		if (typeof requestId !== "string" || requestId.length > 256) return;
 		const reply = async (payload: JsonObject) => {

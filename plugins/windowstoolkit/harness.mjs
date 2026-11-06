@@ -9,9 +9,9 @@ import { WebSocketServer } from "ws";
 import { unzipSync, strFromU8 } from "fflate";
 
 const root = dirname(fileURLToPath(import.meta.url));
-const sd = join(root, "com.dailyops.v2.sdPlugin");
+const sd = join(root, "com.windowstoolkit.core.sdPlugin");
 const manifest = JSON.parse(readFileSync(join(sd, "manifest.json"), "utf8"));
-const runDir = mkdtempSync(join(tmpdir(), "dailyops-test-"));
+const runDir = mkdtempSync(join(tmpdir(), "windowstoolkit-test-"));
 const LOG = join(runDir, "dryrun.jsonl");
 rmSync(LOG, { force: true });
 rmSync(join(sd, "cache"), { recursive: true, force: true });
@@ -45,12 +45,12 @@ const info = {
 	colors: { buttonPressedBackgroundColor: "#303030FF", buttonPressedBorderColor: "#646464FF", buttonPressedTextColor: "#969696FF", disabledColor: "#F7821B59", highlightColor: "#F7821BFF", mouseDownColor: "#CF6304FF" },
 	devicePixelRatio: 2,
 	devices: [{ id: "DEV1", name: "Stream Deck", size: { columns: 5, rows: 4 }, type: 0 }],
-	plugin: { uuid: "com.dailyops.v2", version: "1.0.0.0" },
+	plugin: { uuid: "com.windowstoolkit.core", version: "1.0.0.0" },
 };
 
-const proc = spawn(process.execPath, [join(sd, "bin/plugin.js"), "-port", String(port), "-pluginUUID", "com.dailyops.v2", "-registerEvent", "registerPlugin", "-info", JSON.stringify(info)], {
+const proc = spawn(process.execPath, [join(sd, "bin/plugin.js"), "-port", String(port), "-pluginUUID", "com.windowstoolkit.core", "-registerEvent", "registerPlugin", "-info", JSON.stringify(info)], {
 	cwd: sd,
-	env: { ...process.env, DAILYOPS_DRYRUN: "1", DAILYOPS_DRYRUN_LOG: LOG },
+	env: { ...process.env, WINTOOLKIT_DRYRUN: "1", WINTOOLKIT_DRYRUN_LOG: LOG },
 	stdio: ["ignore", "pipe", "pipe"],
 });
 let out = "";
@@ -67,8 +67,8 @@ const decodeSvg = (img) => decodeURIComponent(img.replace(/^data:image\/svg\+xml
 
 try {
 	const reg = await waitFor((m) => m.event === "registerPlugin");
-	check("plugin registers with Stream Deck", reg.uuid === "com.dailyops.v2");
-	check("public name and category are Windows Daily Toolkit with stable internal identity", manifest.Name === "Windows Daily Toolkit" && manifest.Category === manifest.Name && manifest.UUID === "com.dailyops.v2");
+	check("plugin registers with Stream Deck", reg.uuid === "com.windowstoolkit.core");
+	check("public name and category are Windows Toolkit with stable internal identity", manifest.Name === "Windows Toolkit" && manifest.Category === manifest.Name && manifest.UUID === "com.windowstoolkit.core");
 
 	const cases = {
 		downloads: { settings: { folderPath: "C:\\Users\\you\\Documents" }, expect: (c) => c.command === "folder" && c.args[0] === "C:\\Users\\you\\Documents" },
@@ -78,7 +78,7 @@ try {
 		websitefolder: { settings: {}, expect: (c) => c.command === "url" && c.args[0].includes("/hold?device=DEV1") },
 		volup: { settings: { step: "10" }, expect: (c) => c.command === "vol" && c.args[0] === "up" && c.args[1] === "5" },
 		voldown: { settings: {}, expect: (c) => c.command === "vol" && c.args[0] === "down" && c.args[1] === "3" },
-		appsfolder: { settings: {}, expect: (c) => c.command === "url" && c.args[0] === "streamdeck://plugins/message/com.dailyops.vscode.v2/hold?device=DEV1&streamdeck=hidden" },
+		appsfolder: { settings: {}, expect: (c) => c.command === "url" && c.args[0] === "streamdeck://plugins/message/com.windowstoolkit.vscode/hold?device=DEV1&streamdeck=hidden" },
 		back: { settings: {}, expect: (c) => c.command === "url" && c.args[0].includes("/release?device=DEV1") },
 		screenshot: { settings: {}, expect: (c) => c.command === "shot" && c.args[0] === "area" && c.args[2] === "1" && c.args[3] === "1" },
 		showdesktop: { settings: {}, expect: (c) => c.command === "desktop" },
@@ -86,20 +86,24 @@ try {
 		copy: { settings: {}, expect: (c) => c.command === "keys" && c.args[0] === "^c" },
 		paste: { settings: {}, expect: (c) => c.command === "keys" && c.args[0] === "^v" },
 	};
-	check("every manifest action has a test", manifest.Actions.every((a) => cases[a.UUID.split(".").pop()]));
-	const retired = new Set(["chrome", "youtube", "claude", "chatgpt", "vscode", "thinkorswim", "fidelity"].map((id) => "com.dailyops.v2." + id));
-	check("13 visible actions plus a hidden folder compatibility alias", manifest.Actions.length === 14 && manifest.Actions.filter((a) => a.VisibleInActionsList !== false).length === 13 && manifest.Actions.find((a) => a.UUID === "com.dailyops.v2.folder")?.VisibleInActionsList === false && !manifest.Actions.some((a) => retired.has(a.UUID)));
+	const FEATURES = JSON.parse(readFileSync(join(sd, "features.json"), "utf8"));
+	const isFeature = (id) => FEATURES.some((f) => f.id === id);
+	const fcases = featureCases();
+	check("every manifest action has a test", manifest.Actions.every((a) => cases[a.UUID.split(".").pop()] || fcases[a.UUID.split(".").pop()]));
+	const retired = new Set(["chrome", "youtube", "claude", "chatgpt", "vscode", "thinkorswim", "fidelity"].map((id) => "com.windowstoolkit.core." + id));
+	check("original 13 actions + every Windows Toolkit feature, plus a hidden folder alias", manifest.Actions.length === 14 + FEATURES.length && manifest.Actions.filter((a) => a.VisibleInActionsList !== false).length === 13 + FEATURES.length && manifest.Actions.find((a) => a.UUID === "com.windowstoolkit.core.folder")?.VisibleInActionsList === false && !manifest.Actions.some((a) => retired.has(a.UUID)));
 	const appsArchive = unzipSync(readFileSync(join(sd, "profiles/Apps.streamDeckProfile")));
 	const bundledActions = Object.entries(appsArchive).filter(([path]) => path.endsWith("/manifest.json")).flatMap(([, bytes]) => JSON.parse(strFromU8(bytes)).Controllers?.flatMap((c) => Object.values(c.Actions || {})) || []);
-	check("bundled Apps page contains only Back and an unconfigured Open App", bundledActions.length === 2 && ["back", "app"].every((id) => bundledActions.some((a) => a.UUID === "com.dailyops.v2." + id)) && bundledActions.filter((a) => a.UUID.endsWith(".app")).every((a) => !a.Settings?.appId && !a.Settings?.target));
+	check("bundled Apps page contains only Back and an unconfigured Open App", bundledActions.length === 2 && ["back", "app"].every((id) => bundledActions.some((a) => a.UUID === "com.windowstoolkit.core." + id)) && bundledActions.filter((a) => a.UUID.endsWith(".app")).every((a) => !a.Settings?.appId && !a.Settings?.target));
 	const websiteArchive = unzipSync(readFileSync(join(sd, "profiles/Websites.streamDeckProfile")));
 	const websiteActions = Object.entries(websiteArchive).filter(([path]) => path.endsWith("/manifest.json")).flatMap(([, bytes]) => JSON.parse(strFromU8(bytes)).Controllers?.flatMap((c) => Object.values(c.Actions || {})) || []);
 	check("plugin bundles an editable Websites page with Back and an unconfigured website", manifest.Profiles.some((p) => p.Name === "profiles/Websites" && p.Readonly === false) && websiteActions.length === 2 && websiteActions.some((a) => a.UUID.endsWith(".back")) && websiteActions.some((a) => a.UUID.endsWith(".website") && !a.Settings?.url));
-	check("one Monitor Control action replaces both fixed monitor actions", manifest.Actions.filter((a) => /monitor/.test(a.UUID)).length === 1 && manifest.Actions.some((a) => a.UUID === "com.dailyops.v2.monitorcontrol" && a.Name === "Monitor Control"));
+	check("one Monitor Control action replaces both fixed monitor actions", manifest.Actions.filter((a) => /monitor/.test(a.UUID)).length === 1 && manifest.Actions.some((a) => a.UUID === "com.windowstoolkit.core.monitorcontrol" && a.Name === "Monitor Control"));
 
 	let col = 0;
 	for (const a of manifest.Actions) {
 		const id = a.UUID.split(".").pop();
+		if (isFeature(id)) continue;
 		const ctx = "ctx-" + id;
 		const { settings, expect } = cases[id];
 		const coordinates = { column: col % 5, row: Math.floor(col / 5) };
@@ -118,17 +122,62 @@ try {
 		check(`${id}: key press runs the right command`, cmds.length > 0 && expect(cmds[0]), JSON.stringify(cmds[0] ?? null));
 	}
 
+	// ---------------- Windows Toolkit feature keys
+	const READS = (c) => ["mlist", "snap", "place", "warm", "resolve", "icon"].includes(c.command) || (c.command === "fx" && ["stats", "topapp"].includes(c.args[0])) || (c.command === "audio" && (["mute-get", "peak", "current", "volume", "list"].includes(c.args[0]) || (c.args[0] === "app" && c.args[3] === "get"))) || (["powerplan", "radio", "gamemode"].includes(c.command) && c.args[c.command === "radio" ? 1 : 0] === "get") || ["wifisignal", "battery", "pinghost", "port"].includes(c.command);
+	let fcol = 0;
+	for (const f of FEATURES) {
+		const c = fcases[f.id];
+		const action = "com.windowstoolkit.core." + f.id, ctx = "fx-" + f.id, settings = c.settings || {};
+		const coordinates = { column: fcol % 5, row: Math.floor(fcol / 5) % 3 }; fcol++;
+		send({ event: "willAppear", action, context: ctx, device: "DEV1", payload: { settings, coordinates, controller: "Keypad", isInMultiAction: false, state: 0 } });
+		const img = await waitFor((m) => m.event === "setImage" && m.context === ctx);
+		const svg = decodeSvg(img.payload.image);
+		check(`${f.id}: draws its animated key`, svg.startsWith("<svg") && svg.includes("</svg>") && !/NaN|undefined/.test(svg));
+		await sleep(420);
+		const frames = sent.filter((x) => x.event === "setImage" && x.context === ctx).slice(-4).map((x) => /data-glyph-motion="[^"]*">([\s\S]{0,400})/.exec(decodeSvg(x.payload.image))?.[1]);
+		check(`${f.id}: the icon itself moves`, frames.length >= 3 && new Set(frames).size >= 3);
+		const before = dry().length, sentBefore = sent.length;
+		send({ event: "keyDown", action, context: ctx, device: "DEV1", payload: { settings, coordinates, isInMultiAction: false, state: 0 } });
+		await sleep(f.hold ? 1150 : 60);
+		send({ event: "keyUp", action, context: ctx, device: "DEV1", payload: { settings, coordinates, isInMultiAction: false, state: 0 } });
+		await sleep(350);
+		const cmds = dry().slice(before).filter((x) => !READS(x));
+		const msgs = sent.slice(sentBefore);
+		check(`${f.id}: press does the right thing`, c.expect(cmds, msgs), JSON.stringify(cmds.slice(0, 2)));
+		send({ event: "willDisappear", action, context: ctx, device: "DEV1", payload: { settings, coordinates, controller: "Keypad", isInMultiAction: false, state: 0 } });
+	}
+	// A tap on a hold-to-confirm key never runs it.
+	{
+		const action = "com.windowstoolkit.core.shutdown", ctx = "fx-tap-shutdown", payload = { settings: {}, coordinates: { column: 0, row: 0 }, controller: "Keypad", isInMultiAction: false, state: 0 };
+		send({ event: "willAppear", action, context: ctx, device: "DEV1", payload });
+		await sleep(150);
+		const before = dry().length;
+		send({ event: "keyDown", action, context: ctx, device: "DEV1", payload });
+		await sleep(200);
+		send({ event: "keyUp", action, context: ctx, device: "DEV1", payload });
+		await sleep(300);
+		check("a short tap on Shut Down only warns and never shuts down", !dry().slice(before).some((c) => c.command === "power") && sent.some((m) => m.event === "showAlert" && m.context === ctx));
+	}
+	// Live keys show real readings from the host.
+	{
+		const live = (id) => decodeSvg([...sent].reverse().find((m) => m.event === "setImage" && m.context === "fx-" + id).payload.image);
+		check("CPU key shows a percentage ring", /\d+<tspan[^>]*>%/.test(live("cpu")));
+		check("Ping key shows the host's round-trip time", live("ping").includes(">18<"));
+		check("Battery key shows 78%", live("battery").includes("78%"));
+		check("Market key shows a session state", /OPEN|PRE|AFTER|CLOSED/.test(live("market")));
+	}
+
 	// Feedback flashes
 	const oks = sent.filter((m) => m.event === "showOk").map((m) => m.context);
 	check("launch keys flash ✓", ["ctx-app", "ctx-downloads", "ctx-website"].every((c) => oks.includes(c)));
 	// Advanced target: an .exe path goes straight to "path"
 	const app2 = { target: "C:\\Tools\\putty.exe", args: "-load prod" };
-	send({ event: "willAppear", action: "com.dailyops.v2.app", context: "ctx-app2", device: "DEV1", payload: { settings: app2, coordinates: { column: 4, row: 3 }, controller: "Keypad", isInMultiAction: false, state: 0 } });
+	send({ event: "willAppear", action: "com.windowstoolkit.core.app", context: "ctx-app2", device: "DEV1", payload: { settings: app2, coordinates: { column: 4, row: 3 }, controller: "Keypad", isInMultiAction: false, state: 0 } });
 	await sleep(300);
 	const n0 = dry().length;
-	send({ event: "keyDown", action: "com.dailyops.v2.app", context: "ctx-app2", device: "DEV1", payload: { settings: app2, coordinates: { column: 4, row: 3 }, isInMultiAction: false, state: 0 } });
+	send({ event: "keyDown", action: "com.windowstoolkit.core.app", context: "ctx-app2", device: "DEV1", payload: { settings: app2, coordinates: { column: 4, row: 3 }, isInMultiAction: false, state: 0 } });
 	await sleep(50);
-	send({ event: "keyUp", action: "com.dailyops.v2.app", context: "ctx-app2", device: "DEV1", payload: { settings: app2, coordinates: { column: 4, row: 3 }, isInMultiAction: false, state: 0 } });
+	send({ event: "keyUp", action: "com.windowstoolkit.core.app", context: "ctx-app2", device: "DEV1", payload: { settings: app2, coordinates: { column: 4, row: 3 }, isInMultiAction: false, state: 0 } });
 	await sleep(600);
 	const pc = dry().slice(n0).find((c) => c.command === "path");
 	check("Open App with a typed .exe path launches it with arguments", pc && pc.args[0] === "C:\\Tools\\putty.exe" && pc.args[1] === "-load prod");
@@ -146,13 +195,13 @@ try {
 	check("Open Folder: label from folder name + chosen colour", folderSvg.includes("PROJECTS") && folderSvg.includes("#FFD200"));
 	check("Website Folder uses the approved Vivid ocean folder/globe artwork", decodeSvg(lastImg("ctx-websitefolder").payload.image).includes("#2B86FF") && decodeSvg(lastImg("ctx-websitefolder").payload.image).includes('cy="76"') && decodeSvg(lastImg("ctx-websitefolder").payload.image).includes("WEBSITE"));
 	const foldersSvg = decodeSvg(lastImg("ctx-downloads").payload.image);
-	check("existing Downloads UUID now presents Folders", manifest.Actions.find((a) => a.UUID === "com.dailyops.v2.downloads")?.Name === "Folders" && foldersSvg.includes("FOLDERS") && !foldersSvg.includes("DOWNLOADS"));
+	check("existing Downloads UUID now presents Folders", manifest.Actions.find((a) => a.UUID === "com.windowstoolkit.core.downloads")?.Name === "Folders" && foldersSvg.includes("FOLDERS") && !foldersSvg.includes("DOWNLOADS"));
 	const emptyFolder = { gestures: false };
-	send({ event: "willAppear", action: "com.dailyops.v2.downloads", context: "ctx-empty-folder", device: "DEV1", payload: { settings: emptyFolder, coordinates: { column: 0, row: 0 }, controller: "Keypad", isInMultiAction: false, state: 0 } });
+	send({ event: "willAppear", action: "com.windowstoolkit.core.downloads", context: "ctx-empty-folder", device: "DEV1", payload: { settings: emptyFolder, coordinates: { column: 0, row: 0 }, controller: "Keypad", isInMultiAction: false, state: 0 } });
 	await waitFor((m) => m.event === "setImage" && m.context === "ctx-empty-folder");
 	const beforeEmptyFolder = dry().length;
-	send({ event: "keyDown", action: "com.dailyops.v2.downloads", context: "ctx-empty-folder", device: "DEV1", payload: { settings: emptyFolder, coordinates: { column: 0, row: 0 }, isInMultiAction: false, state: 0 } });
-	send({ event: "keyUp", action: "com.dailyops.v2.downloads", context: "ctx-empty-folder", device: "DEV1", payload: { settings: emptyFolder, coordinates: { column: 0, row: 0 }, isInMultiAction: false, state: 0 } });
+	send({ event: "keyDown", action: "com.windowstoolkit.core.downloads", context: "ctx-empty-folder", device: "DEV1", payload: { settings: emptyFolder, coordinates: { column: 0, row: 0 }, isInMultiAction: false, state: 0 } });
+	send({ event: "keyUp", action: "com.windowstoolkit.core.downloads", context: "ctx-empty-folder", device: "DEV1", payload: { settings: emptyFolder, coordinates: { column: 0, row: 0 }, isInMultiAction: false, state: 0 } });
 	await waitFor((m) => m.event === "showAlert" && m.context === "ctx-empty-folder");
 	check("Folders requires a path instead of silently opening Downloads", !dry().slice(beforeEmptyFolder).some((c) => c.command === "folder"));
 	// Compare the original alias against its unified settings for every inherited feature.
@@ -163,7 +212,7 @@ try {
 		const unified = { ...old, folderNameLabel: true, folderEmptyLabel: "Folder", iconTheme: old.iconTheme || "fuchsia" };
 		const pair = { old, unified, legacy: `parity-old-${pi}-${si}`, current: `parity-new-${pi}-${si}` };
 		parity.push(pair);
-		for (const [id, context, settings] of [["folder", pair.legacy, old], ["downloads", pair.current, unified]]) send({ event: "willAppear", action: "com.dailyops.v2." + id, context, device: "DEV1", payload: { settings, coordinates: { column: 0, row: 0 }, controller: "Keypad", isInMultiAction: false, state: 0 } });
+		for (const [id, context, settings] of [["folder", pair.legacy, old], ["downloads", pair.current, unified]]) send({ event: "willAppear", action: "com.windowstoolkit.core." + id, context, device: "DEV1", payload: { settings, coordinates: { column: 0, row: 0 }, controller: "Keypad", isInMultiAction: false, state: 0 } });
 	}
 	await sleep(350);
 	const stableSvg = (ctx) => decodeSvg(lastImg(ctx).payload.image).replace(/k[a-z0-9]+(?=(?:bg|fg|vg|glow|hl|bar|tile|sheen)\b)/g, "key");
@@ -173,24 +222,24 @@ try {
 		const commands = [];
 		for (const [id, context, settings] of [["folder", pair.legacy, pair.old], ["downloads", pair.current, pair.unified]]) {
 			const start = dry().length;
-			send({ event: "keyDown", action: "com.dailyops.v2." + id, context, device: "DEV1", payload: { settings, coordinates: { column: 0, row: 0 }, isInMultiAction: false, state: 0 } });
+			send({ event: "keyDown", action: "com.windowstoolkit.core." + id, context, device: "DEV1", payload: { settings, coordinates: { column: 0, row: 0 }, isInMultiAction: false, state: 0 } });
 			await sleep(40);
 			commands.push(dry().slice(start).filter((c) => c.command === "folder"));
 		}
 		pathParity &&= JSON.stringify(commands[0]) === JSON.stringify(commands[1]);
 	}
 	check("unified Folders preserves path trimming, environment paths, UNC/root paths and missing-path behavior", pathParity);
-	for (const p of parity) for (const [id, context] of [["folder", p.legacy], ["downloads", p.current]]) send({ event: "willDisappear", action: "com.dailyops.v2." + id, context, device: "DEV1", payload: { settings: {}, coordinates: { column: 0, row: 0 }, controller: "Keypad", isInMultiAction: false, state: 0 } });
+	for (const p of parity) for (const [id, context] of [["folder", p.legacy], ["downloads", p.current]]) send({ event: "willDisappear", action: "com.windowstoolkit.core." + id, context, device: "DEV1", payload: { settings: {}, coordinates: { column: 0, row: 0 }, controller: "Keypad", isInMultiAction: false, state: 0 } });
 	const volSvg = decodeSvg(lastImg("ctx-volup").payload.image);
 	check("Volume Up: neon art", volSvg.includes("VOL UP"));
 
 	// Live artwork must produce changing frames, honor style/settings, and stop when hidden.
-	for (const id of manifest.Actions.map((a) => a.UUID.split(".").pop())) {
+	for (const id of manifest.Actions.map((a) => a.UUID.split(".").pop()).filter((id) => !isFeature(id))) {
 		const frames = sent.filter((x) => x.event === "setImage" && x.context === "ctx-" + id).slice(-6).map((x) => decodeSvg(x.payload.image));
 		const phases = frames.map((svg) => /stroke-dashoffset="([^"]+)"/.exec(svg)?.[1]);
 		check(`${id}: visible keys animate with changing artwork`, frames.length >= 3 && new Set(phases).size >= 3 && phases.every(Boolean));
 	}
-	const desktopSettings = (settings, event = "didReceiveSettings") => send({ event, action: "com.dailyops.v2.showdesktop", context: "ctx-showdesktop", device: "DEV1", payload: { settings, coordinates: { column: 0, row: 0 }, controller: "Keypad", isInMultiAction: false, state: 0 } });
+	const desktopSettings = (settings, event = "didReceiveSettings") => send({ event, action: "com.windowstoolkit.core.showdesktop", context: "ctx-showdesktop", device: "DEV1", payload: { settings, coordinates: { column: 0, row: 0 }, controller: "Keypad", isInMultiAction: false, state: 0 } });
 	desktopSettings({ iconStyle: "vivid", animate: false }); await sleep(150);
 	const stillCount = sent.filter((x) => x.event === "setImage" && x.context === "ctx-showdesktop").length;
 	await sleep(250);
@@ -207,10 +256,10 @@ try {
 
 	// Custom picture wins
 	const pic = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/iZk9HQAAAABJRU5ErkJggg==";
-	send({ event: "didReceiveSettings", action: "com.dailyops.v2.copy", context: "ctx-copy", device: "DEV1", payload: { settings: { iconImage: pic }, coordinates: { column: 0, row: 3 }, controller: "Keypad", isInMultiAction: false, state: 0 } });
+	send({ event: "didReceiveSettings", action: "com.windowstoolkit.core.copy", context: "ctx-copy", device: "DEV1", payload: { settings: { iconImage: pic }, coordinates: { column: 0, row: 3 }, controller: "Keypad", isInMultiAction: false, state: 0 } });
 	await sleep(200);
 	check("uploaded picture retains its composition inside an animated frame", decodeSvg(lastImg("ctx-copy").payload.image).includes(pic) && decodeSvg(lastImg("ctx-copy").payload.image).includes("stroke-dashoffset"));
-	send({ event: "didReceiveSettings", action: "com.dailyops.v2.copy", context: "ctx-copy", device: "DEV1", payload: { settings: { iconImage: pic, animate: false }, coordinates: { column: 0, row: 3 }, controller: "Keypad", isInMultiAction: false, state: 0 } });
+	send({ event: "didReceiveSettings", action: "com.windowstoolkit.core.copy", context: "ctx-copy", device: "DEV1", payload: { settings: { iconImage: pic, animate: false }, coordinates: { column: 0, row: 3 }, controller: "Keypad", isInMultiAction: false, state: 0 } });
 	await sleep(150);
 	const stillPictureCount = sent.filter((x) => x.event === "setImage" && x.context === "ctx-copy").length;
 	await sleep(200);
@@ -218,9 +267,9 @@ try {
 
 	// Volume hold-to-repeat
 	const v0 = dry().filter((c) => c.command === "vol").length;
-	send({ event: "keyDown", action: "com.dailyops.v2.voldown", context: "ctx-voldown", device: "DEV1", payload: { settings: {}, coordinates: { column: 2, row: 2 }, isInMultiAction: false, state: 0 } });
+	send({ event: "keyDown", action: "com.windowstoolkit.core.voldown", context: "ctx-voldown", device: "DEV1", payload: { settings: {}, coordinates: { column: 2, row: 2 }, isInMultiAction: false, state: 0 } });
 	await sleep(1100);
-	send({ event: "keyUp", action: "com.dailyops.v2.voldown", context: "ctx-voldown", device: "DEV1", payload: { settings: {}, coordinates: { column: 2, row: 2 }, isInMultiAction: false, state: 0 } });
+	send({ event: "keyUp", action: "com.windowstoolkit.core.voldown", context: "ctx-voldown", device: "DEV1", payload: { settings: {}, coordinates: { column: 2, row: 2 }, isInMultiAction: false, state: 0 } });
 	const v1 = dry().filter((c) => c.command === "vol").length;
 	await sleep(500);
 	const v2 = dry().filter((c) => c.command === "vol").length;
@@ -232,7 +281,7 @@ try {
 	const press = (uuid, ctx, settings) => send({ event: "keyDown", action: uuid, context: ctx, device: "DEV1", payload: { settings: { ...launchFixtures[ctx], ...settings }, coordinates: { column: 0, row: 0 }, isInMultiAction: false, state: 0 } });
 	const release = (uuid, ctx, settings) => send({ event: "keyUp", action: uuid, context: ctx, device: "DEV1", payload: { settings: { ...launchFixtures[ctx], ...settings }, coordinates: { column: 0, row: 0 }, isInMultiAction: false, state: 0 } });
 	const since = (n) => dry().slice(n);
-	const CL = "com.dailyops.v2.app";
+	const CL = "com.windowstoolkit.core.app";
 	send({ event: "willAppear", action: CL, context: "ctx-launch", device: "DEV1", payload: { settings: launchFixtures["ctx-launch"], coordinates: { column: 0, row: 0 }, controller: "Keypad", isInMultiAction: false, state: 0 } });
 	await sleep(200);
 
@@ -274,7 +323,7 @@ try {
 	check("gestures off → opens immediately, no window moving", c.some((x) => x.command === "start") && !c.some((x) => x.command === "snap" || x.command === "place"));
 	release(CL, "ctx-launch", { gestures: false });
 
-	const WS = "com.dailyops.v2.website", wsS = { url: "github.com", browser: "chrome" };
+	const WS = "com.windowstoolkit.core.website", wsS = { url: "github.com", browser: "chrome" };
 	m = dry().length;
 	press(WS, "ctx-website", wsS); await sleep(50); release(WS, "ctx-website", wsS); await sleep(100);
 	press(WS, "ctx-website", wsS); await sleep(50); release(WS, "ctx-website", wsS);
@@ -282,7 +331,7 @@ try {
 	c = since(m);
 	check("Chrome website on monitor 2 opens a new window there", c.some((x) => x.command === "cmd" && x.args[1].startsWith("--new-window")) && c.some((x) => x.command === "place" && x.args[0] === "1"));
 
-	const FD = "com.dailyops.v2.folder", fdS = { folderPath: "C:\\Users\\you\\Projects" };
+	const FD = "com.windowstoolkit.core.folder", fdS = { folderPath: "C:\\Users\\you\\Projects" };
 	m = dry().length;
 	press(FD, "ctx-folder", fdS); await sleep(50); release(FD, "ctx-folder", fdS); await sleep(100);
 	press(FD, "ctx-folder", fdS); await sleep(50); release(FD, "ctx-folder", fdS);
@@ -290,8 +339,8 @@ try {
 	c = since(m);
 	check("folder double tap → monitor 2", c.some((x) => x.command === "folder") && c.some((x) => x.command === "place" && x.args[0] === "1"));
 	m = dry().length;
-	press("com.dailyops.v2.downloads", "ctx-downloads", fdS); await sleep(50); release("com.dailyops.v2.downloads", "ctx-downloads", fdS); await sleep(100);
-	press("com.dailyops.v2.downloads", "ctx-downloads", fdS); await sleep(50); release("com.dailyops.v2.downloads", "ctx-downloads", fdS);
+	press("com.windowstoolkit.core.downloads", "ctx-downloads", fdS); await sleep(50); release("com.windowstoolkit.core.downloads", "ctx-downloads", fdS); await sleep(100);
+	press("com.windowstoolkit.core.downloads", "ctx-downloads", fdS); await sleep(50); release("com.windowstoolkit.core.downloads", "ctx-downloads", fdS);
 	await sleep(700); c = since(m);
 	check("unified Folders preserves the same double-tap monitor 2 gesture", c.some((x) => x.command === "folder") && c.some((x) => x.command === "place" && x.args[0] === "1"));
 
@@ -305,13 +354,13 @@ try {
 
 	// Volume / copy are not gesture keys (instant)
 	m = dry().length;
-	press("com.dailyops.v2.copy", "ctx-copy", {});
+	press("com.windowstoolkit.core.copy", "ctx-copy", {});
 	await sleep(100);
 	check("Copy stays instant (no gesture delay)", since(m).some((x) => x.command === "keys"));
-	release("com.dailyops.v2.copy", "ctx-copy", {});
+	release("com.windowstoolkit.core.copy", "ctx-copy", {});
 
 	// ---- Hand-off to the VS Code plugin ----
-	const VS = "com.dailyops.v2.app";
+	const VS = "com.windowstoolkit.core.app";
 	send({ event: "willAppear", action: VS, context: "ctx-vs2", device: "DEV1", payload: { settings: launchFixtures["ctx-vs2"], coordinates: { column: 1, row: 3 }, controller: "Keypad", isInMultiAction: false, state: 0 } });
 	await sleep(200);
 	m = dry().length;
@@ -319,7 +368,7 @@ try {
 	await sleep(600);
 	c = since(m);
 	const ho = c.find((x) => x.command === "url" && x.args[0].startsWith("streamdeck://"));
-	check("Open App configured for VS Code opens it and hands off to companion keys", c.some((x) => x.command === "appid" && x.args[0] === "Microsoft.VisualStudioCode") && ho && ho.args[0] === "streamdeck://plugins/message/com.dailyops.vscode.v2/show?device=DEV1&streamdeck=hidden", ho?.args[0]);
+	check("Open App configured for VS Code opens it and hands off to companion keys", c.some((x) => x.command === "appid" && x.args[0] === "Microsoft.VisualStudioCode") && ho && ho.args[0] === "streamdeck://plugins/message/com.windowstoolkit.vscode/show?device=DEV1&streamdeck=hidden", ho?.args[0]);
 	check("hand-off happens after the launch", c.findIndex((x) => x.command === "appid") < c.findIndex((x) => x === ho));
 	m = dry().length;
 	press(VS, "ctx-vs2", { showKeys: false }); await sleep(50); release(VS, "ctx-vs2", { showKeys: false });
@@ -332,7 +381,7 @@ try {
 
 
 	// ---- Screenshot gestures ----
-	const SH = "com.dailyops.v2.screenshot";
+	const SH = "com.windowstoolkit.core.screenshot";
 	m = dry().length;
 	press(SH, "ctx-screenshot", {}); await sleep(50); release(SH, "ctx-screenshot", {}); await sleep(100);
 	press(SH, "ctx-screenshot", {}); await sleep(50); release(SH, "ctx-screenshot", {});
@@ -355,7 +404,7 @@ try {
 	check("window/all screenshots flash ✓", sent.some((x) => x.event === "showOk" && x.context === "ctx-screenshot"));
 
 	// ---- Configurable Monitor Control (Windows numbers intentionally differ from the old fixed keys) ----
-	const MC = "com.dailyops.v2.monitorcontrol";
+	const MC = "com.windowstoolkit.core.monitorcontrol";
 	const lg = { screenKey: "\\\\?\\DISPLAY#GSM2#B", screenNumber: 3 };
 	const asus = { screenKey: "\\\\?\\DISPLAY#AUS3#C", screenNumber: 4, sleep: false };
 	const monitorImg = (ctx) => decodeSvg(lastImg(ctx).payload.image);
@@ -420,7 +469,7 @@ try {
 	check("settings panel gets the screen list (with numbers kept for off screens)", scr.payload.list.length === 3 && scr.payload.list.find((x) => x.key.includes("AUS3")).num === 4);
 
 	// ---- Apps page ----
-	const AF = "com.dailyops.v2.appsfolder", BK = "com.dailyops.v2.back";
+	const AF = "com.windowstoolkit.core.appsfolder", BK = "com.windowstoolkit.core.back";
 	let sw0 = sent.filter((x) => x.event === "switchToProfile").length;
 	press(AF, "ctx-appsfolder", {}); await sleep(300); release(AF, "ctx-appsfolder", {});
 	let sws = sent.filter((x) => x.event === "switchToProfile").slice(sw0);
@@ -435,10 +484,10 @@ try {
 	check("Apps page: a generic app opens and keeps the Apps page visible", sent.filter((x) => x.event === "switchToProfile").length === sw0);
 	// VS Code chosen on an Open App key → steps back to main keys, then hands off to the VS Code keys
 	const vsApp = { appId: "Microsoft.VisualStudioCode", appName: "Visual Studio Code" };
-	send({ event: "willAppear", action: "com.dailyops.v2.app", context: "ctx-app-vs", device: "DEV1", payload: { settings: vsApp, coordinates: { column: 3, row: 1 }, controller: "Keypad", isInMultiAction: false, state: 0 } });
+	send({ event: "willAppear", action: "com.windowstoolkit.core.app", context: "ctx-app-vs", device: "DEV1", payload: { settings: vsApp, coordinates: { column: 3, row: 1 }, controller: "Keypad", isInMultiAction: false, state: 0 } });
 	await sleep(200);
 	m = dry().length;
-	press("com.dailyops.v2.app", "ctx-app-vs", vsApp); await sleep(50); release("com.dailyops.v2.app", "ctx-app-vs", vsApp);
+	press("com.windowstoolkit.core.app", "ctx-app-vs", vsApp); await sleep(50); release("com.windowstoolkit.core.app", "ctx-app-vs", vsApp);
 	await sleep(700);
 	sws = sent.filter((x) => x.event === "switchToProfile").slice(sw0);
 	const shows = since(m).filter((x) => x.command === "url" && x.args[0].includes("/show?device=DEV1"));
@@ -451,7 +500,7 @@ try {
 	press(BK, "ctx-apps-back", {}); await sleep(300); release(BK, "ctx-apps-back", {});
 	sws = sent.filter((x) => x.event === "switchToProfile").slice(sw0);
 	check("Back → previous (main) keys, and VS Code follow-focus is released", sws.length === 1 && !sws[0].payload?.profile && since(m).some((x) => x.command === "url" && x.args[0].includes("/release")));
-	const WF = "com.dailyops.v2.websitefolder";
+	const WF = "com.windowstoolkit.core.websitefolder";
 	sw0 = sent.filter((x) => x.event === "switchToProfile").length;
 	press(WF, "ctx-websitefolder", {}); await sleep(200); release(WF, "ctx-websitefolder", {});
 	sws = sent.filter((x) => x.event === "switchToProfile").slice(sw0);
@@ -463,20 +512,20 @@ try {
 	press(BK, "ctx-apps-back", {}); await sleep(200); release(BK, "ctx-apps-back", {});
 
 	// Settings panel → plugin (Stream Deck announces the panel first)
-	send({ event: "propertyInspectorDidAppear", action: "com.dailyops.v2.app", context: "ctx-app", device: "DEV1" });
+	send({ event: "propertyInspectorDidAppear", action: "com.windowstoolkit.core.app", context: "ctx-app", device: "DEV1" });
 	await sleep(100);
-	send({ event: "sendToPlugin", action: "com.dailyops.v2.app", context: "ctx-app", payload: { event: "getApps" } });
+	send({ event: "sendToPlugin", action: "com.windowstoolkit.core.app", context: "ctx-app", payload: { event: "getApps" } });
 	const apps = await waitFor((m) => m.event === "sendToPropertyInspector" && m.payload?.event === "apps");
 	check("settings panel receives installed-app list", apps.payload.ok && apps.payload.apps.length >= 3 && apps.payload.apps[0].n);
 	const s = { appId: "Example.SampleApp", appName: "Sample App" };
-	send({ event: "sendToPlugin", action: "com.dailyops.v2.app", context: "ctx-app", payload: { event: "getIcon", settings: s } });
+	send({ event: "sendToPlugin", action: "com.windowstoolkit.core.app", context: "ctx-app", payload: { event: "getIcon", settings: s } });
 	const ic = await waitFor((m) => m.event === "sendToPropertyInspector" && m.payload?.event === "icon");
-	send({ event: "sendToPlugin", action: "com.dailyops.v2.app", context: "ctx-app", payload: { event: "getMonitors", order: "primary" } });
+	send({ event: "sendToPlugin", action: "com.windowstoolkit.core.app", context: "ctx-app", payload: { event: "getMonitors", order: "primary" } });
 	const mons = await waitFor((m) => m.event === "sendToPropertyInspector" && m.payload?.event === "monitors");
 	check("settings panel gets the monitor list", mons.payload.ok && mons.payload.list.length === 3);
 	check("settings panel preview gets the real icon", ic.payload.real === true && decodeSvg(ic.payload.image).includes("data:image/png") && ic.payload.token === JSON.stringify(s));
 	const secretCanary = "test-only-sensitive-never-log-this";
-	send({ event: "sendToPlugin", action: "com.dailyops.v2.app", context: "ctx-app", payload: { event: "protectPassword", requestId: "test-protection-failure", password: secretCanary, binding: "appid:fixture" } });
+	send({ event: "sendToPlugin", action: "com.windowstoolkit.core.app", context: "ctx-app", payload: { event: "protectPassword", requestId: "test-protection-failure", password: secretCanary, binding: "appid:fixture" } });
 	const protectedReply = await waitFor((x) => x.event === "sendToPropertyInspector" && x.payload?.event === "credentials" && x.payload.requestId === "test-protection-failure");
 	check("password protection fails closed when native encryption is unavailable", protectedReply.payload.ok === false && !sent.some((x) => x.event === "setSettings" && JSON.stringify(x).includes(secretCanary)));
 	check("password commands never leak sensitive arguments to test logs", !readFileSync(LOG, "utf8").includes(secretCanary) && !out.includes(secretCanary));
@@ -498,4 +547,39 @@ try {
 	console.log(`\n${pass} passed, ${fail} failed`);
 	if (fail) console.log("--- plugin output ---\n" + out.slice(-3000));
 	process.exit(fail ? 1 : 0);
+}
+
+function featureCases() {
+	const cmd = (name, ...args) => (cmds) => cmds.length > 0 && cmds[0].command === name && args.every((v, i) => v === undefined || cmds[0].args[i] === v);
+	const chordIs = (keys) => cmd("chord", keys);
+	const none = (cmds) => cmds.length === 0;
+	const sw = (profile, page) => (cmds, msgs) => msgs.some((m) => m.event === "switchToProfile" && m.payload?.profile === profile && (m.payload?.page ?? 0) === page);
+	const C = (expect, settings) => ({ expect, settings });
+	return {
+		dispset: C(cmd("url", "ms-settings:display")), nightlight: C(cmd("url", "ms-settings:nightlight")), hdr: C(chordIs("91,18,66")),
+		brightup: C(cmd("fx", "bright", "10")), brightdown: C(cmd("fx", "bright", "-10")), project: C(chordIs("91,80")), nextscreen: C(chordIs("91,16,39")),
+		snap: C(chordIs("91,37")), ontop: C(cmd("fx", "ontop")), vdesk: C(chordIs("91,17,39")), taskview: C(chordIs("91,9")), cliphist: C(chordIs("91,86")),
+		emoji: C(chordIs("91,190")), lockpc: C(cmd("fx", "lock")), screensoff: C(cmd("fx", "screensoff")),
+		mute: C(cmd("audio", "mute-toggle", "spk")), micmute: C(cmd("audio", "mute-toggle", "mic")),
+		ptt: C((cmds) => cmds.length >= 2 && cmds[0].command === "audio" && cmds[0].args.join() === "mute-set,mic,0" && cmds[1].args.join() === "mute-set,mic,1"),
+		miclevel: C(cmd("url", "ms-settings:sound")), output: C(cmd("audio", "cycle", "spk")), input: C(cmd("audio", "cycle", "mic")),
+		appvol: C(cmd("audio", "app", "spk", "spotify", "toggle"), { process: "spotify" }), mixer: C(cmd("url", "ms-settings:apps-volume")),
+		soundboard: C(cmd("sound", "C:\\Sounds\\applause.mp3", "80"), { file: "C:\\Sounds\\applause.mp3" }),
+		prev: C(chordIs("177")), playpause: C(chordIs("179")), next: C(chordIs("176")),
+		cpu: C(cmd("cmd", "taskmgr.exe")), ram: C(cmd("cmd", "taskmgr.exe")), gpu: C(cmd("cmd", "taskmgr.exe")), disk: C(cmd("cmd", "taskmgr.exe")), diskfree: C(cmd("folder", "C:\\")),
+		netdown: C(cmd("cmd", "taskmgr.exe")), netup: C(cmd("cmd", "taskmgr.exe")), ping: C(none), wifi: C(cmd("url", "ms-settings:network-wifi")), battery: C(cmd("url", "ms-settings:batterysaver")),
+		uptime: C(cmd("cmd", "taskmgr.exe")), topapp: C(cmd("cmd", "taskmgr.exe")), procs: C(cmd("cmd", "taskmgr.exe")), taskmgr: C(cmd("cmd", "taskmgr.exe")), resmon: C(cmd("cmd", "resmon.exe")),
+		sleep: C(cmd("power", "sleep")), restart: C(cmd("power", "restart")), shutdown: C(cmd("power", "shutdown")), signout: C(cmd("power", "signout")), hibernate: C(cmd("power", "hibernate")),
+		powerplan: C(cmd("powerplan", "next")), closeapp: C(cmd("fx", "close")), forceclose: C(cmd("fx", "kill")), service: C(cmd("service", "Spooler"), { name: "Spooler" }), emptybin: C(cmd("recycle")),
+		wifiradio: C(cmd("radio", "wifi", "toggle")), bluetooth: C(cmd("radio", "bluetooth", "toggle")), airplane: C(cmd("radio", "all", "toggle")), dnd: C(chordIs("91,78")),
+		timer: C(none), stopwatch: C(none), pomodoro: C(none), clock: C(cmd("url", "ms-settings:dateandtime")), worldclock: C(cmd("url", "ms-settings:dateandtime")),
+		runcmd: C(cmd("run", "npm test", "C:\\src\\app"), { command: "npm test", folder: "C:\\src\\app" }), terminal: C(cmd("terminal", "C:\\src\\app"), { folder: "C:\\src\\app" }),
+		snippet: C(cmd("type", "Thanks!"), { text: "Thanks!" }), shortcut: C(chordIs("17,16,27"), { keys: "Ctrl+Shift+Esc" }),
+		workspace: C(cmd("url", "https://example.com"), { items: "https://example.com" }), portcheck: C(cmd("url", "http://localhost:3000/")),
+		guid: C((cmds) => cmds[0]?.command === "clip-set" && /^[0-9a-f-]{36}$/.test(cmds[0].args[0])), timestamp: C((cmds) => cmds[0]?.command === "clip-set" && /^\d{4}-\d\d-\d\dT/.test(cmds[0].args[0])),
+		cliptools: C((cmds) => cmds[0]?.command === "clip-get" && cmds[1]?.command === "clip-set", { op: "trim" }), textcase: C((cmds) => cmds[0]?.command === "clip-get" && cmds[1]?.args[0] === "HELLO WORLD"),
+		gamebar: C(chordIs("91,71")), gamemode: C(cmd("gamemode", "toggle")), clip30: C(chordIs("91,18,71")), record: C(chordIs("91,18,82")), gameshot: C(chordIs("91,18,44")), perf: C(chordIs("91,71")),
+		market: C(cmd("url", "ms-settings:dateandtime")), bell: C(none), journal: C(cmd("journal", undefined, "Took profit"), { text: "Took profit" }), toscreen: C(cmd("movewin", "2"), { screen: "2" }),
+		page: C(sw("profiles/Developer", 1), { profile: "Developer", page: "2" }), persona: C(sw("profiles/Gaming", 0), { profile: "Gaming" }),
+	};
 }

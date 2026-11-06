@@ -8,10 +8,10 @@ const output = join(ROOT, "test-output/all-animations-preview");
 mkdirSync(output, { recursive: true });
 // Include on/off monitor states and both Website Folder styles in the main-plugin preview.
 const kinds = ["appsfolder", "downloads", "app", "website", "back", "screenshot", "showdesktop", "copy", "paste", "volup", "voldown", "monitorcontrol", "monitor-off", "websitefolder", "websitefolder"];
-const image = "data:image/png;base64," + readFileSync(join(ROOT, "plugins/dailyops/com.dailyops.v2.sdPlugin/imgs/plugin/icon.png")).toString("base64");
+const image = "data:image/png;base64," + readFileSync(join(ROOT, "plugins/windowstoolkit/com.windowstoolkit.core.sdPlugin/imgs/plugin/icon.png")).toString("base64");
 for (let frame = 0; frame < 72; frame++) {
 	const phase = frame / 72;
-	let body = `<rect width="790" height="520" rx="24" fill="#11141D"/><text x="28" y="36" fill="#F4F5FA" font-family="Segoe UI" font-size="21" font-weight="600">Windows Daily Toolkit · Animated keys</text>`;
+	let body = `<rect width="790" height="520" rx="24" fill="#11141D"/><text x="28" y="36" fill="#F4F5FA" font-family="Segoe UI" font-size="21" font-weight="600">Windows Toolkit · Animated keys</text>`;
 	for (const [i, kind] of kinds.entries()) {
 		const x = 28 + (i % 5) * 150, y = 60 + Math.floor(i / 5) * 150;
 		const motion = { kind, phase };

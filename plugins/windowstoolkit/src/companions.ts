@@ -7,7 +7,7 @@ import { inApps, leaveApps, setCompanionManager } from "./nav.js";
 const TRANSIENT = new Set(["", "streamdeck", "shellexperiencehost", "searchhost", "startmenuexperiencehost", "lockapp", "idle", "textinputhost"]);
 export function initCompanions(): void {
 	// Ordinary harnesses must not connect to the user's installed companions.
-	if (process.env.DAILYOPS_DRYRUN === "1" && !process.env.DAILYOPS_COMPANION_PIPE) return;
+	if (process.env.WINTOOLKIT_DRYRUN === "1" && !process.env.WINTOOLKIT_COMPANION_PIPE) return;
 	const log = streamDeck.logger.createScope("companions");
 	const router = new CompanionRouter({
 		allowed: COMPANIONS.map((c) => c.uuid),

@@ -16,7 +16,7 @@ const b64 = (s: string) => Buffer.from(s, "utf8").toString("base64");
 const unb64 = (s: string) => Buffer.from(s ?? "", "base64").toString("utf8");
 
 /** Dry-run (non-Windows, or forced for tests): commands are recorded instead of executed. */
-const DRY = process.platform !== "win32" || process.env.DAILYOPS_DRYRUN === "1";
+const DRY = process.platform !== "win32" || process.env.WINTOOLKIT_DRYRUN === "1";
 
 /**
  * A single long-lived, hidden PowerShell process. Spawning PowerShell per key press costs ~0.5s,
@@ -32,7 +32,7 @@ class PowerShellHost {
 
 	onEvent(listener: (e: PsEvent) => void): void {
 		this.#listeners.push(listener);
-		if (DRY && process.env.DAILYOPS_DRYRUN_EVENTS && this.#listeners.length === 1) this.#pollDryEvents(process.env.DAILYOPS_DRYRUN_EVENTS);
+		if (DRY && process.env.WINTOOLKIT_DRYRUN_EVENTS && this.#listeners.length === 1) this.#pollDryEvents(process.env.WINTOOLKIT_DRYRUN_EVENTS);
 	}
 
 	#emit(e: PsEvent): void {
@@ -160,13 +160,13 @@ const DRY_SCREENS = [
 const DRY_NUMS = new Map(DRY_SCREENS.map((m) => [m.key, m.num]));
 const DRY_SOURCES = new Map(DRY_SCREENS.map((m) => [m.key, m.gdiNum]));
 
-/** Dry-run behaviour: log the command (and append it to DAILYOPS_DRYRUN_LOG if set). */
+/** Dry-run behaviour: log the command (and append it to WINTOOLKIT_DRYRUN_LOG if set). */
 function dryRun(command: string, args: string[]): PsResult {
 	// Never log credentials, even in tests. Fail closed when native DPAPI is unavailable.
 	if (command.startsWith("secret-")) return { status: "err", message: "Password protection requires Windows DPAPI." };
 	const entry = JSON.stringify({ command, args });
 	log.info(`[dry-run] ${entry}`);
-	if (process.env.DAILYOPS_DRYRUN_LOG) appendFileSync(process.env.DAILYOPS_DRYRUN_LOG, entry + "\n");
+	if (process.env.WINTOOLKIT_DRYRUN_LOG) appendFileSync(process.env.WINTOOLKIT_DRYRUN_LOG, entry + "\n");
 	switch (command) {
 		case "apps":
 			return {
@@ -209,6 +209,34 @@ function dryRun(command: string, args: string[]): PsResult {
 		}
 		case "shot":
 			return { status: "ok", message: args[0] === "area" ? "snipping" : "C:\\Users\\you\\Pictures\\Screenshots\\Screenshot.png" };
+		case "audio":
+			switch (args[0]) {
+				case "mute-get": case "mute-set": case "mute-toggle": return { status: "ok", message: args[0] === "mute-set" && args[2] === "1" ? "muted" : "live" };
+				case "peak": return { status: "ok", message: "37" };
+				case "volume": return { status: "ok", message: "48" };
+				case "current": case "cycle": case "set": return { status: "ok", message: args[1] === "mic" ? "Desk Mic" : "Speakers" };
+				case "list": return { status: "ok", message: "id1\tSpeakers\t1\nid2\tHeadset\t0" };
+				case "app": return /missing/i.test(args[2] ?? "") ? { status: "miss", message: `${args[2]} is not playing audio` } : { status: "ok", message: "60,0" };
+			}
+			return { status: "ok", message: "" };
+		case "fx":
+			switch (args[0]) {
+				case "stats": return { status: "ok", message: "23.5,12.0,1048576,2500000,300000,214" };
+				case "topapp": return { status: "ok", message: "chrome,18" };
+				case "bright": return { status: "ok", message: "70" };
+				case "ontop": return { status: "ok", message: "on" };
+				case "fgname": return { status: "ok", message: "Code" };
+			}
+			return { status: "ok", message: args[0] ?? "" };
+		case "powerplan": return { status: "ok", message: "Balanced" };
+		case "radio": case "gamemode": return { status: "ok", message: "on" };
+		case "wifisignal": return { status: "ok", message: "88" };
+		case "battery": return { status: "ok", message: "78,True" };
+		case "pinghost": return { status: "ok", message: "18" };
+		case "port": return { status: "ok", message: "up" };
+		case "clip-get": return { status: "ok", message: "hello world" };
+		case "run": return { status: "ok", message: "exit 0" };
+		case "movewin": return { status: "ok", message: `1,${args[0]}` };
 		default:
 			return { status: "ok", message: command };
 	}

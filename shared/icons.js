@@ -2,6 +2,9 @@
 // inspector (icon picker) and the build script (static manifest images).
 // All artwork is original, generic glyphs (no brand logos).
 
+import { FX, fxArt, hasFx } from "./icons-fx.js";
+export { FX, hasFx };
+
 const W = "#fff";
 
 /** Colour themes: [gradient start, gradient end, ink (cut-out colour)] */
@@ -353,12 +356,12 @@ function movingGlyph(glyph, art, ink, phase, breathe) {
 
 /**
  * Builds a 144×144 key image. No SVG filters are used, so it renders the same in Stream Deck's SVG engine.
- * @param {{glyph: string, theme: string, label?: string, style?: "neon"|"vivid"|"real"|"pro", image?: string, motion?: {kind: string, phase: number}}} spec
+ * @param {{glyph: string, theme: string, label?: string, style?: "neon"|"vivid"|"real"|"pro", image?: string, motion?: {kind: string, phase: number}, data?: Record<string, unknown>}} spec
  *   style "vivid": white glyph on a colour gradient · "neon": colour-gradient glyph on dark glass ·
  *   "real": the app's/site's own icon (data URI in `image`) on dark glass.
  * @returns {string} SVG markup
  */
-export function keySvg({ glyph, theme, label = "", style = "neon", image, motion }) {
+export function keySvg({ glyph, theme, label = "", style = "neon", image, motion, data }) {
 	let [c1, c2, ink] = THEMES[theme] ?? THEMES.violet;
 	if (style !== "vivid" && NEON_OVERRIDE[theme]) [c1, c2] = NEON_OVERRIDE[theme];
 	const u = "k" + (++uid).toString(36); // unique ids so many icons can share one HTML page
@@ -410,7 +413,7 @@ export function keySvg({ glyph, theme, label = "", style = "neon", image, motion
 		body += `<image x="${x}" y="${y}" width="${sz}" height="${sz}" preserveAspectRatio="xMidYMid meet" href="${image}" xlink:href="${image}"${float}/>`;
 	} else {
 		const g = hasLabel ? `translate(72 58) scale(.86) translate(-72 -62)` : `translate(72 72) scale(1.02) translate(-72 -62)`;
-		let art = draw(dark ? "#151824" : ink);
+		let art = hasFx(glyph) ? fxArt(glyph, dark ? "#151824" : ink, motion ? motion.phase : 0, data, !!motion) : draw(dark ? "#151824" : ink);
 		if (motion?.kind === "screenshot" && glyph === "capture") {
 			const scan = 39 + breathe * 42;
 			art += `<path d="M38 ${scan.toFixed(2)}h68" ${stroke(W, 2)} stroke-opacity="${(.25 + breathe * .5).toFixed(3)}"/><circle cx="111" cy="28" r="3" fill="${W}" opacity="${(.45 + breathe * .5).toFixed(3)}"/>`;
@@ -421,7 +424,7 @@ export function keySvg({ glyph, theme, label = "", style = "neon", image, motion
 			const windows = `<rect x="34" y="36" width="44" height="32" rx="5" ${soft(.3)} stroke="${W}" stroke-width="3"/><path d="M35 45h42" ${stroke(W, 2)}/><rect x="62" y="51" width="46" height="31" rx="5" fill="${dark ? '#151824' : ink}" stroke="${W}" stroke-width="3"/><path d="M63 60h44" ${stroke(W, 2)}/>`;
 			art = shell + `<g opacity="${(.75 * reveal).toFixed(3)}"><path d="M57 45h12v12H57zM74 45h12v12H74zM57 62h12v12H57zM74 62h12v12H74z" fill="${W}"/></g>` +
 				`<g transform="translate(${(reveal * 8).toFixed(2)} ${(reveal * 12).toFixed(2)}) translate(72 60) scale(${(1 - reveal * .2).toFixed(3)}) translate(-72 -60)" opacity="${(1 - reveal * .85).toFixed(3)}">${windows}</g>`;
-		} else if (motion) art = movingGlyph(glyph, art, dark ? "#151824" : ink, phase, breathe);
+		} else if (motion && !hasFx(glyph)) art = movingGlyph(glyph, art, dark ? "#151824" : ink, phase, breathe);
 		if (dark) art = art.replace(/"#fff"/gi, `"url(#${u}fg)"`);
 		const shadow = art.replace(/"(#[0-9a-f]{3,6}|url\(#[^)]*\))"/gi, '"#000"');
 		body +=
@@ -494,7 +497,7 @@ export function monitorKeySvg({ n, state, caption, motion }) {
  * @param {number} size output px
  */
 export function monoSvg(glyph, size) {
-	const draw = GLYPHS[glyph] ?? GLYPHS.rocket;
+	const draw = hasFx(glyph) ? (ink) => fxArt(glyph, ink, 0, {}, false) : GLYPHS[glyph] ?? GLYPHS.rocket;
 	return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="14 8 116 108">${draw("#2D2D2D").replace(/#A8F4FF|#FFE07A|#3DDC84|#FF5470/g, "#fff")}</svg>`;
 }
 

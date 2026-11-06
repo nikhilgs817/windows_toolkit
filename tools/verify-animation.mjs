@@ -5,7 +5,7 @@ import ts from "typescript";
 import { keySvg, monitorKeySvg, pictureKeySvg, PRESET_ICONS } from "../shared/icons.js";
 
 const raster = (svg) => Buffer.from(new Resvg(svg, { font: { loadSystemFonts: false, ...(process.platform === "win32" ? { fontFiles: [process.env.WINDIR + "/Fonts/segoeuib.ttf"] } : {}) } }).render().pixels);
-const image = "data:image/png;base64," + readFileSync(new URL("../plugins/dailyops/assets/windows-daily-toolkit-master.png", import.meta.url)).toString("base64");
+const image = "data:image/png;base64," + readFileSync(new URL("../plugins/windowstoolkit/assets/windows-toolkit-master.png", import.meta.url)).toString("base64");
 let looks = 0;
 for (const [kind, preset] of Object.entries(PRESET_ICONS)) {
 	for (const style of ["neon", "vivid", "pro"]) {

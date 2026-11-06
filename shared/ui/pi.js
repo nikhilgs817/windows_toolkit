@@ -1,9 +1,9 @@
-/* Daily Ops — settings panel (property inspector). Plain JS, no external dependencies. */
+/* Windows Toolkit — settings panel (property inspector). Plain JS, no external dependencies. */
 (function () {
 	"use strict";
 
 	// Shared by every plugin in the suite. kind = the action's last UUID segment; VS Code keys are "vsc-*".
-	const PLUGIN_PREFIXES = { "com.dailyops.vscode.v2.": "vsc-", "com.dailyops.v2.": "" };
+	const PLUGIN_PREFIXES = { "com.windowstoolkit.vscode.": "vsc-", "com.windowstoolkit.core.": "" };
 	const APP_KINDS = ["app"];
 
 	// Keys that have a "real" icon (app / site / folder icon from Windows or the web).
@@ -13,7 +13,7 @@
 
 	const LAUNCH_KINDS = APP_KINDS.concat(["downloads", "folder", "website", "vsc-project"]);
 	const FOLDER_KINDS = ["folder", "downloads", "vsc-project"];
-	/** Daily Ops keys that hand the deck over to a companion plugin's keys (VS Code key, or any app key set to VS Code). */
+	/** Windows Toolkit keys that hand the deck over to a companion plugin's keys (VS Code key, or any app key set to VS Code). */
 	const VSCODE_RE = /visual studio code|\bvs ?code\b|vscodium|\bcode( - insiders)?\.exe\b|Microsoft\.VisualStudioCode/i;
 	const MONITOR_KINDS = ["monitorcontrol"];
 	let motionTimer = null;
@@ -46,7 +46,7 @@
 	let passwordTimer = null;
 
 	const $ = (id) => document.getElementById(id);
-	const I = () => window.DailyOpsIcons;
+	const I = () => window.WinToolkitIcons;
 
 	/* ------------------------------------------------------------ Stream Deck connection */
 
@@ -71,14 +71,14 @@
 			if (actionUuid.startsWith(prefix)) { kind = tag + actionUuid.slice(prefix.length); break; }
 		}
 		settings = (ai.payload && ai.payload.settings) || {};
-		if (window.DailyOpsCompanion && actionUuid.startsWith(window.DailyOpsCompanion.uuid + ".")) kind = "comp-" + actionUuid.slice(window.DailyOpsCompanion.uuid.length + 1);
+		if (window.WinToolkitCompanion && actionUuid.startsWith(window.WinToolkitCompanion.uuid + ".")) kind = "comp-" + actionUuid.slice(window.WinToolkitCompanion.uuid.length + 1);
 
 		ws = new WebSocket("ws://127.0.0.1:" + port);
 		ws.onopen = () => {
 			ws.send(JSON.stringify({ event: registerEvent, uuid: piUuid }));
 			if (APP_KINDS.includes(kind)) requestApps();
 			if (MONITOR_KINDS.includes(kind)) sendToPlugin({ event: "getScreens" });
-			if (LAUNCH_KINDS.includes(kind) || kind === "vsc-back" || window.DailyOpsCompanion) ws.send(JSON.stringify({ event: "getGlobalSettings", context: piUuid }));
+			if (LAUNCH_KINDS.includes(kind) || kind === "vsc-back" || window.WinToolkitCompanion) ws.send(JSON.stringify({ event: "getGlobalSettings", context: piUuid }));
 		};
 		ws.onmessage = (e) => {
 			let m;
@@ -302,7 +302,7 @@
 
 	function build() {
 		const show = (id, on) => ($(id).hidden = !on);
-		const companion = window.DailyOpsCompanion;
+		const companion = window.WinToolkitCompanion;
 		const definition = companion?.commands?.find((c) => "comp-" + c.id === kind);
 		show("sec-companion", !!definition);
 		if (definition) {
@@ -319,6 +319,7 @@
 			let shortcutTimer;
 			$("companionShortcut").addEventListener("input", () => { clearTimeout(shortcutTimer); shortcutTimer = setTimeout(() => { set("shortcut", $("companionShortcut").value.trim()); save(); }, 350); });
 		}
+		buildFeature(show);
 		const isApp = APP_KINDS.includes(kind);
 		show("sec-app", isApp);
 		show("sec-credentials", kind === "app");
@@ -443,7 +444,7 @@
 		// Look
 		const realCapable = REAL_CAPABLE.includes(kind);
 		$("styleReal").hidden = !realCapable;
-		$("stylePro").hidden = kind.indexOf("vsc-") !== 0 && !window.DailyOpsCompanion;
+		$("stylePro").hidden = kind.indexOf("vsc-") !== 0 && !window.WinToolkitCompanion;
 		$("styleReal").textContent = kind === "folder" || kind === "downloads" ? "Folder icon" : kind === "website" ? "Site icon" : "App icon";
 		for (const b of document.querySelectorAll("#styleSeg button")) {
 			b.addEventListener("click", () => {
@@ -507,11 +508,76 @@
 		}
 	}
 
+	/* ------------------------------------------------------------ Windows Toolkit feature keys */
+
+	function featureDef() { return (window.WinToolkitFeatures?.features || []).find((f) => f.id === kind); }
+	function buildFeature(show) {
+		const def = featureDef();
+		show("sec-feature", !!def);
+		if (!def) return;
+		$("featureTitle").textContent = def.name;
+		$("featureTip").textContent = def.tip + (def.hold ? " A tap only shows a warning, so it can't fire by accident." : "");
+		const box = $("featureFields");
+		box.textContent = "";
+		for (const field of def.fields || []) {
+			const row = document.createElement("div");
+			row.className = "row";
+			const label = document.createElement("label");
+			label.textContent = field.label;
+			const id = "ff-" + field.key;
+			label.htmlFor = id;
+			let input;
+			if (field.type === "select") {
+				input = document.createElement("select");
+				for (const [value, text] of field.options) { const o = document.createElement("option"); o.value = value; o.textContent = text; input.appendChild(o); }
+			} else if (field.type === "textarea") {
+				input = document.createElement("textarea"); input.rows = 4;
+			} else if (field.type === "check") {
+				input = document.createElement("input"); input.type = "checkbox";
+			} else {
+				input = document.createElement("input");
+				input.type = field.type === "number" ? "number" : "text";
+				if (field.min !== undefined) input.min = field.min;
+				if (field.max !== undefined) input.max = field.max;
+			}
+			input.id = id;
+			input.className = field.type === "check" ? "" : "grow";
+			if (field.placeholder) input.placeholder = field.placeholder;
+			else if (field.def !== undefined && field.type !== "check" && field.type !== "select") input.placeholder = String(field.def);
+			let timer;
+			const commit = () => {
+				const value = field.type === "check" ? input.checked : field.type === "number" ? (input.value === "" ? "" : Number(input.value)) : input.value.trim() === "" ? "" : input.value;
+				set(field.key, value); save();
+			};
+			input.addEventListener(field.type === "select" || field.type === "check" ? "change" : "input", () => { clearTimeout(timer); timer = setTimeout(commit, field.type === "select" || field.type === "check" ? 0 : 400); });
+			row.appendChild(label); row.appendChild(input);
+			box.appendChild(row);
+			if (field.hint || field.type === "file" || field.type === "folder") {
+				const hint = document.createElement("div");
+				hint.className = "hint pad";
+				hint.textContent = field.hint || (field.type === "folder" ? "Paste the full folder path (in File Explorer: click the address bar, copy). %USERPROFILE% works." : "Paste the full file path (Shift + right-click the file › Copy as path).");
+				box.appendChild(hint);
+			}
+		}
+	}
+	function fillFeature() {
+		const def = featureDef();
+		if (!def) return;
+		for (const field of def.fields || []) {
+			const el = $("ff-" + field.key);
+			if (!el || document.activeElement === el) continue;
+			const v = settings[field.key];
+			if (field.type === "check") el.checked = v === undefined ? field.def === true : v === true;
+			else el.value = v === undefined || v === null ? (field.type === "select" && field.def !== undefined ? String(field.def) : "") : String(v);
+		}
+	}
+
 	/* ------------------------------------------------------------ fill from settings */
 
 	function fill() {
 		if (!domReady || !kind) return;
 		const s = settings;
+		fillFeature();
 		const setVal = (id, v) => { const el = $(id); if (document.activeElement !== el) el.value = v == null ? "" : v; };
 		setVal("target", s.target);
 		setVal("args", s.args);
@@ -697,7 +763,7 @@
 
 	function animatedLook(look) {
 		return settings.animate !== false
-			? Object.assign({}, look, { motion: { kind, phase: (Date.now() % 6000) / 6000 } }) : look;
+			? Object.assign({}, look, { motion: { kind, phase: (Date.now() % 12000) / 12000 } }) : look;
 	}
 
 	function drawPreview() {
