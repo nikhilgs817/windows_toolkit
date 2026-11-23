@@ -296,7 +296,7 @@ export class MonitorControlAction extends ToolkitAction<MonitorSettings> {
 	#svg(s: MonitorSettings): string {
 		const st = this.#state(s);
 		const caption = s.hideLabel ? " " : s.iconLabel?.trim() || (st.state === "unconfigured" ? "Monitor Control" : `Monitor ${st.num}`);
-		return svgDataUri(monitorKeySvg({ n: st.num, state: st.state, caption, motion: this.motion(s) }));
+		return svgDataUri(monitorKeySvg({ n: st.num, state: st.state, caption, motion: this.motion(s), image: s.iconImage }));
 	}
 
 	override imageNow(s: MonitorSettings): { image: string } {

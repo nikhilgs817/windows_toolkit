@@ -10,7 +10,7 @@ import { FEATURES, GROUPS } from "./features.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const sd = join(here, "com.windowstoolkit.core.sdPlugin");
-const VERSION = "3.0.1.0";
+const VERSION = "3.0.2.0";
 const PRODUCT_NAME = "Windows Toolkit";
 
 /** id → [Name in action list, tooltip] — order = order in the Stream Deck action list. */
@@ -33,6 +33,27 @@ const ACTIONS = [
 
 // Windows Toolkit 3.0 feature keys, in catalogue order after the original actions.
 for (const f of FEATURES) ACTIONS.push([f.id, f.name, f.tip]);
+
+/** Stream Deck lists one flat category per plugin, so the action list is sorted group by group, most-used keys first. */
+export const ACTION_GROUPS = [
+	["Launch & Folders", ["app", "website", "websitefolder", "appsfolder", "downloads", "workspace", "terminal", "runcmd"]],
+	["Display & Windows", ["showdesktop", "screenshot", "monitorcontrol", "rotate", "dispset", "nightlight", "hdr", "brightup", "brightdown", "project", "nextscreen", "toscreen", "snap", "ontop", "vdesk", "taskview", "screensoff"]],
+	["Audio & Media", ["volup", "voldown", "mute", "micmute", "ptt", "miclevel", "output", "input", "appvol", "mixer", "soundboard", "prev", "playpause", "next"]],
+	["Clipboard & Text", ["copy", "paste", "cliphist", "cliptools", "textcase", "snippet", "shortcut", "emoji", "guid", "timestamp"]],
+	["System Monitor", ["cpu", "ram", "gpu", "disk", "diskfree", "netdown", "netup", "ping", "wifi", "battery", "uptime", "topapp", "procs", "taskmgr", "resmon"]],
+	["Power & Connectivity", ["lockpc", "sleep", "restart", "shutdown", "signout", "hibernate", "powerplan", "wifiradio", "bluetooth", "airplane", "dnd", "closeapp", "forceclose", "service", "emptybin", "portcheck"]],
+	["Timers & Clocks", ["timer", "stopwatch", "pomodoro", "clock", "worldclock"]],
+	["Gaming", ["gamebar", "gamemode", "clip30", "record", "gameshot", "perf"]],
+	["Trading", ["market", "bell", "journal"]],
+	["Profiles & Navigation", ["nextpage", "page", "persona", "back", "folder"]],
+];
+{
+	const order = ACTION_GROUPS.flatMap(([, ids]) => ids);
+	const missing = ACTIONS.map(([id]) => id).filter((id) => !order.includes(id));
+	const unknown = order.filter((id) => !ACTIONS.some(([a]) => a === id));
+	if (missing.length || unknown.length || new Set(order).size !== order.length) throw new Error(`Action groups out of date. Missing: ${missing} · Unknown: ${unknown}`);
+	ACTIONS.sort((a, b) => order.indexOf(a[0]) - order.indexOf(b[0]));
+}
 for (const f of FEATURES) PRESET_ICONS[f.id] = { glyph: f.glyph, theme: f.theme, label: f.label ?? f.name };
 
 const write = (rel, data) => {

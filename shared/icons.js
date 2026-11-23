@@ -324,28 +324,16 @@ function websiteFolderGlyph(ink, longitude) {
 	return folderShape + `<g fill="none" stroke="${ink}" stroke-width="3" stroke-linecap="round"><circle cx="72" cy="76" r="20"/><ellipse cx="72" cy="76" rx="${longitude.toFixed(2)}" ry="20"/><path d="M52 76h40M55 66h34M55 86h34"/></g>`;
 }
 
-/** Globe inside the folder spins on a tilted axis: meridians and land masses travel around it (one turn per loop half). */
+/** Globe inside the folder turns: same upright globe as the still icon, with meridians sweeping across it. */
 function spinningWebsiteFolder(ink, phase) {
-	const f = (n) => n.toFixed(2), turn = (phase * 2) % 1, id = "wfg" + (++uid).toString(36);
-	const cx = 72, cy = 76, r = 20;
+	const f = (n) => n.toFixed(2), turn = (phase * 2) % 1, cx = 72, cy = 76, r = 20;
 	let meridians = "";
-	for (let i = 0; i < 4; i++) {
-		const lam = (((turn + i / 4) % 1)) * Math.PI; // front-facing meridians, 45° apart; repeats every quarter turn
+	for (let i = 0; i < 3; i++) {
+		const lam = ((turn + i / 3) % 1) * Math.PI; // three meridians, 60° apart, moving across the front face
 		const c = Math.cos(lam), rx = Math.abs(c) * r;
-		meridians += rx < .6 ? `<path d="M${cx} ${cy - r}V${cy + r}"/>` : `<path d="M${cx} ${cy - r}A${f(rx)} ${r} 0 0 ${c > 0 ? 1 : 0} ${cx} ${cy + r}" opacity="${f(.45 + .55 * Math.sin(lam))}"/>`;
+		meridians += rx < .6 ? `<path d="M${cx} ${cy - r}V${cy + r}"/>` : `<path d="M${cx} ${cy - r}A${f(rx)} ${r} 0 0 ${c > 0 ? 1 : 0} ${cx} ${cy + r}" opacity="${f(.4 + .6 * Math.sin(lam))}"/>`;
 	}
-	// Land shapes ride around the sphere: squeezed at the edges, hidden on the far side.
-	const land = [[0, -6, 8, 6], [.4, 7, 7, 5], [.7, -2, 5, 4]].map(([o, dy, w, h]) => {
-		const lam = (turn + o) * Math.PI * 2, s = Math.sin(lam);
-		if (s <= .05) return "";
-		return `<ellipse cx="${f(cx + (r - 3) * Math.cos(lam))}" cy="${cy + dy}" rx="${f(w * s)}" ry="${h}" fill="${ink}" opacity="${f(.85 * Math.min(1, s * 2))}"/>`;
-	}).join("");
-	return folderShape +
-		`<clipPath id="${id}"><circle cx="${cx}" cy="${cy}" r="${r - 1.5}"/></clipPath>` +
-		`<g transform="rotate(-18 ${cx} ${cy})"><g clip-path="url(#${id})">${land}</g>` +
-		`<g fill="none" stroke="${ink}" stroke-width="3" stroke-linecap="round"><circle cx="${cx}" cy="${cy}" r="${r}"/>${meridians}<path d="M${cx - r} ${cy}h${2 * r}M${cx - 17} ${cy - 10}h34M${cx - 17} ${cy + 10}h34"/></g>` +
-		`<path d="M${cx} ${cy - r - 5}v4M${cx} ${cy + r + 1}v4" stroke="${ink}" stroke-width="3" stroke-linecap="round"/></g>` +
-		`<circle cx="${f(cx - 8)}" cy="${f(cy - 9)}" r="4" fill="${W}" opacity=".55"/>`;
+	return folderShape + `<g fill="none" stroke="${ink}" stroke-width="3" stroke-linecap="round"><circle cx="${cx}" cy="${cy}" r="${r}"/>${meridians}<path d="M52 76h40M55 66h34M55 86h34"/></g>`;
 }
 
 const smooth = (t) => { t = Math.min(1, Math.max(0, t)); return t * t * (3 - 2 * t); };
@@ -513,9 +501,9 @@ export function pictureKeySvg(image, motion) {
  * Monitor on/off key. It shows what a press will do:
  *   monitor on  → red   "TURN OFF"
  *   monitor off → green "TURN ON"
- * @param {{ n: number|string, state: "on"|"off"|"unknown"|"missing"|"unconfigured", caption?: string, motion?: {kind: string, phase: number} }} spec
+ * @param {{ n: number|string, state: "on"|"off"|"unknown"|"missing"|"unconfigured", caption?: string, motion?: {kind: string, phase: number}, image?: string }} spec
  */
-export function monitorKeySvg({ n, state, caption, motion }) {
+export function monitorKeySvg({ n, state, caption, motion, image }) {
 	const u = "m" + (++uid).toString(36);
 	const pal = state === "on" ? TOGGLE_COLOURS.off : state === "off" ? TOGGLE_COLOURS.on : TOGGLE_COLOURS.unknown;
 	const [c1, c2, ink] = pal;
@@ -538,9 +526,12 @@ export function monitorKeySvg({ n, state, caption, motion }) {
 		edge +
 		txt(27, topFs, top, "#fff", ` letter-spacing="1" opacity=".95"`) +
 		// the monitor: lit (white) while on, dark outline while off
-		`<rect x="36" y="38" width="72" height="48" rx="7" fill="${screenOn ? "#fff" : "#000"}" fill-opacity="${screenOn ? 1 : 0.28}" stroke="#fff" stroke-width="4"/>` +
-		`<path d="M72 86v9M58 97h28" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round"/>` +
-		txt(74, 32, num, screenOn ? ink : "#fff") +
+		(image
+			// Your picture sits where the monitor drawing was; the red/green state colours stay.
+			? `<clipPath id="${u}pic"><rect x="34" y="36" width="76" height="62" rx="9"/></clipPath><image x="34" y="36" width="76" height="62" preserveAspectRatio="xMidYMid slice" href="${esc(image)}" clip-path="url(#${u}pic)" opacity="${screenOn ? 1 : 0.55}"/><rect x="34" y="36" width="76" height="62" rx="9" fill="none" stroke="#fff" stroke-width="3"/>`
+			: `<rect x="36" y="38" width="72" height="48" rx="7" fill="${screenOn ? "#fff" : "#000"}" fill-opacity="${screenOn ? 1 : 0.28}" stroke="#fff" stroke-width="4"/>` +
+			`<path d="M72 86v9M58 97h28" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round"/>` +
+			txt(74, 32, num, screenOn ? ink : "#fff")) +
 		`<rect x="14" y="106" width="116" height="30" rx="15" fill="#000" fill-opacity=".28"/>` +
 		txt(128, action.length > 8 ? 17 : 20, action, "#fff", ` letter-spacing="1"`) +
 		`</svg>`

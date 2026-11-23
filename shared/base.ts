@@ -29,8 +29,14 @@ export type Appearance = {
 	iconImage?: string;
 	/** Gentle live artwork on every key and look (default on). */
 	animate?: boolean;
+	/** Loop speed: slow 0.5×, calm 0.75× (default), normal 1×, fast 1.5×. */
+	animSpeed?: string;
 };
 /** Monitor gestures: tap → monitor 1, double-tap → monitor 2, hold → monitor 3. */
+/** Animation speeds offered on every key. The 12-second loop is the "normal" speed. */
+export const ANIM_SPEEDS: Record<string, number> = { slow: 0.5, calm: 0.75, normal: 1, fast: 1.5 };
+export const loopMs = (speed?: string) => Math.round(12000 / (ANIM_SPEEDS[speed ?? "calm"] ?? ANIM_SPEEDS.calm));
+
 export type GestureSettings = { gestures?: boolean; holdSeconds?: number | string };
 export type AppSettings = Appearance & GestureSettings & {
 	/** After opening, switch the deck to the app's own plugin keys (when one exists). Default on. */
@@ -101,7 +107,9 @@ export abstract class ToolkitAction<T extends AnySettings> extends SingletonActi
 	}
 
 	protected motion(s: T): { kind: string; phase: number } | undefined {
-		return s.animate === false ? undefined : { kind: this.kind, phase: (Date.now() % 12000) / 12000 };
+		if (s.animate === false) return undefined;
+		const loop = loopMs(s.animSpeed);
+		return { kind: this.kind, phase: (Date.now() % loop) / loop };
 	}
 
 	#updateMotion(action: Action<T>, settings: T): void {

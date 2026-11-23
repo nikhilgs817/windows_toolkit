@@ -333,7 +333,8 @@
 		show("sec-shot", kind === "screenshot");
 		show("sec-desktop", kind === "showdesktop");
 		show("motionRow", true);
-		$("animate").addEventListener("change", () => { settings.animate = $("animate").checked; save(); });
+		$("animate").addEventListener("change", () => { settings.animate = $("animate").checked; $("animSpeed").disabled = !settings.animate; save(); });
+		$("animSpeed").addEventListener("change", () => { settings.animSpeed = $("animSpeed").value; save(); renderLook(); });
 		show("sec-screen", SCREEN_KINDS.includes(kind));
 		$("sleep").closest(".row").hidden = $("monitorOnOffHint").hidden = !MONITOR_KINDS.includes(kind);
 		show("sec-apps", kind === "appsfolder");
@@ -342,9 +343,10 @@
 		$("returnMain").addEventListener("click", () => sendToPlugin({ event: "returnMain" }));
 		show("sec-navback", kind === "back");
 		const monitorKey = SCREEN_KINDS.includes(kind);
-		show("styleRow", !monitorKey);
-		show("pictureRow", !monitorKey);
-		show("artPickers", !monitorKey);
+		// Only Monitor Control keeps its meaningful red/green colours; every key gets Label, Picture and Animation.
+		show("styleRow", !MONITOR_KINDS.includes(kind));
+		show("pictureRow", true);
+		show("artPickers", !MONITOR_KINDS.includes(kind));
 		if (kind === "screenshot") {
 			$("shotHold").addEventListener("change", () => { set("holdSeconds", $("shotHold").value); save(); fill(); });
 			let st;
@@ -463,7 +465,7 @@
 			sendToPlugin({ event: "refreshIcon", settings });
 		});
 		$("resetLook").addEventListener("click", () => {
-			for (const k of ["iconStyle", "iconGlyph", "iconTheme", "iconLabel", "hideLabel", "iconImage", "animate"]) delete settings[k];
+			for (const k of ["iconStyle", "iconGlyph", "iconTheme", "iconLabel", "hideLabel", "iconImage", "animate", "animSpeed"]) delete settings[k];
 			save();
 			fill();
 		});
@@ -630,6 +632,8 @@
 		if (handoffName()) $("handoffName").textContent = handoffName();
 		$("removeImage").hidden = !s.iconImage;
 		$("animate").checked = s.animate !== false;
+		$("animSpeed").value = SPEEDS[s.animSpeed] ? s.animSpeed : "calm";
+		$("animSpeed").disabled = s.animate === false;
 		$("iconLabel").placeholder = defaultLabel();
 		renderLook();
 	}
@@ -768,9 +772,11 @@
 		}
 	}
 
+	const SPEEDS = { slow: 0.5, calm: 0.75, normal: 1, fast: 1.5 };
+	function loopMs() { return Math.round(12000 / (SPEEDS[settings.animSpeed] || SPEEDS.calm)); }
 	function animatedLook(look) {
 		return settings.animate !== false
-			? Object.assign({}, look, { motion: { kind, phase: (Date.now() % 12000) / 12000 } }) : look;
+			? Object.assign({}, look, { motion: { kind, phase: (Date.now() % loopMs()) / loopMs() } }) : look;
 	}
 
 	function drawPreview() {
@@ -779,7 +785,7 @@
 		if (MONITOR_KINDS.includes(kind)) {
 			const selected = screenList && screenList.find((screen) => screen.key === settings.screenKey);
 			const state = !settings.screenKey ? "unconfigured" : !screenList ? "unknown" : !selected ? "missing" : selected.on ? "on" : "off";
-			preview.innerHTML = lib.monitorKeySvg({ n: monitorN(), state, motion, caption: settings.hideLabel ? " " : (settings.iconLabel || "").trim() || (settings.screenKey ? "Monitor " + monitorN() : "Monitor Control") });
+			preview.innerHTML = lib.monitorKeySvg({ n: monitorN(), state, motion, image: settings.iconImage, caption: settings.hideLabel ? " " : (settings.iconLabel || "").trim() || (settings.screenKey ? "Monitor " + monitorN() : "Monitor Control") });
 		} else if (settings.iconImage) {
 			preview.innerHTML = motion ? lib.pictureKeySvg(settings.iconImage, motion) : '<img src="' + settings.iconImage.replace(/"/g, "&quot;") + '">';
 		} else if (look.style === "real") {

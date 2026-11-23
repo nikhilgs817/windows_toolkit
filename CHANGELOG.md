@@ -1,5 +1,12 @@
 # Changes
 
+## Windows Toolkit 3.0.2.0 — 2026-11-23
+
+- **Look options on every key**: Rotate Display now has Style, Label, Picture, Colour and Animation like the other keys. Monitor Control adds Label, Picture and speed and keeps its red TURN OFF / green TURN ON colours (a picture replaces the small monitor drawing).
+- **Animation speed** on every key: Slow, Calm, Normal or Fast. Calm (0.75× the previous speed) is the new default.
+- **Sorted action list**: actions are grouped as Launch & Folders, Display & Windows, Audio & Media, Clipboard & Text, System Monitor, Power & Connectivity, Timers & Clocks, Gaming, Trading, and Profiles & Navigation, with the most-used keys first in each group.
+- The Website Folder globe now keeps its original look while it turns.
+
 ## Windows Toolkit 3.0.1.0 — 2026-11-23
 
 - New **Rotate Display** key (Display & Windows): choose a monitor from the list and press to switch it between landscape and portrait. Portrait can be 90° or flipped (270°). Only that screen changes; if Windows doesn't confirm the rotation, the key warns and nothing changes. Animated pivot-monitor icon in every look and colour theme.

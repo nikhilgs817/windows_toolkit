@@ -112,6 +112,18 @@ try {
 	await page.locator("#ff-direction").selectOption("flipped");
 	await page.waitForFunction(() => window.savedSettings.at(-1)?.direction === "flipped");
 	console.log("PASS  Rotate Display shows the monitor picker without the sleep option and saves the portrait direction");
+	for (const id of ["styleRow", "pictureRow", "artPickers", "motionRow"]) assert.equal(await page.locator("#" + id).isVisible(), true, `Rotate Display hides ${id}`);
+	assert.equal(await page.locator("#animSpeed").inputValue(), "calm");
+	await page.locator("#animSpeed").selectOption("slow");
+	await page.waitForFunction(() => window.savedSettings.at(-1)?.animSpeed === "slow");
+	console.log("PASS  Rotate Display has Style, Picture, Colour and Animation; speed defaults to Calm and saves");
+	await page.goto(`http://127.0.0.1:${server.address().port}/pi.html`);
+	await page.evaluate(() => window.connectElgatoStreamDeckSocket(12345, "test-inspector", "registerPropertyInspector", "{}", JSON.stringify({ action: "com.windowstoolkit.core.monitorcontrol", payload: { settings: {} } })));
+	await page.waitForSelector("#screenPick", { state: "visible" });
+	assert.equal(await page.locator("#pictureRow").isVisible(), true);
+	assert.equal(await page.locator("#animSpeed").isVisible(), true);
+	assert.equal(await page.locator("#styleRow").isVisible(), false);
+	console.log("PASS  Monitor Control offers Label, Picture and speed while keeping its state colours");
 
 	for (const id of ["screenshot", "showdesktop", "downloads", "appsfolder", "websitefolder", "website", "copy", "paste", "volup", "voldown", "back", "monitorcontrol", "app", "folder", "nextpage"]) {
 		await page.goto(`http://127.0.0.1:${server.address().port}/pi.html`);
