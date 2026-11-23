@@ -110,6 +110,35 @@ export const FX = {
 	micmute:ink=>D.muted?FX.micmuted(ink):FX.miclive(ink),
 	record:ink=>D.on?FX.recon(ink):FX.recidle(ink),
 	market:ink=>D.state==='open'?FX.mktopen(ink):FX.mktpre(ink),
+	// Pivot monitor: the panel spins 90° on its stand to portrait, rests, then spins back (twice per 12 s loop).
+	rotate: (ink) => {
+		const ease = (t) => { t = Math.min(1, Math.max(0, t)); const s = 1.4; return 1 + (s + 1) * Math.pow(t - 1, 3) + s * Math.pow(t - 1, 2); };
+		const k = P < .5 ? ease((P - .1) / .28) : 1 - ease((P - .6) / .28);
+		const turning = P < .5 ? (P > .08 && P < .42) : (P > .58 && P < .92);
+		const t = P < .5 ? Math.min(1, Math.max(0, (P - .1) / .28)) : Math.min(1, Math.max(0, (P - .6) / .28));
+		const a = 90 * k, cid = "rot" + (++uid).toString(36);
+		const panel = `<rect x="-42" y="-27" width="84" height="54" rx="7"/>`;
+		// Desktop inside the panel: wallpaper hill, a window and a taskbar, so the turn reads as a real screen.
+		const desk = `<clipPath id="${cid}">${panel}</clipPath><g clip-path="url(#${cid})">` +
+			`<rect x="-42" y="-27" width="84" height="54" ${soft(.16)}/>` +
+			`<path d="M-42 14q16-16 30-6t28-6q14-4 26 4v21h-84Z" ${soft(.3)}/>` +
+			`<circle cx="24" cy="-12" r="6" ${soft(.55)}/>` +
+			`<rect x="-30" y="-17" width="38" height="24" rx="3" fill="${ink}" stroke="${W}" stroke-width="2.5"/><path d="M-30 -10h38" ${st(W, 2)}/>` +
+			`<rect x="-42" y="19" width="84" height="8" ${soft(.85)}/>` + [-8, 0, 8].map((x) => `<rect x="${x - 2.5}" y="21" width="5" height="4" rx="1" fill="${ink}"/>`).join("") +
+			`<rect x="${f(-70 + 140 * t)}" y="-40" width="14" height="80" fill="${W}" opacity="${turning ? .22 : 0}" transform="rotate(20)"/></g>` +
+			`<rect x="-42" y="-27" width="84" height="54" rx="7" fill="none" stroke="${W}" stroke-width="5"/>`;
+		// Arc arrow follows the spin: clockwise to portrait, back the other way.
+		const r = 58, cw = P < .5, start = cw ? -40 : 50, sweep = cw ? 90 * t : -90 * t;
+		const pt = (deg) => [72 + r * Math.cos(deg * Math.PI / 180), 56 + r * Math.sin(deg * Math.PI / 180)];
+		const [x0, y0] = pt(start), [x1, y1] = pt(start + sweep), head = start + sweep, dir = cw ? 1 : -1;
+		const arc = turning && t > .02 ? `<g opacity="${f(Math.sin(Math.PI * t) * .95)}"><path d="M${f(x0)} ${f(y0)}A${r} ${r} 0 0 ${cw ? 1 : 0} ${f(x1)} ${f(y1)}" ${st(W, 5)}/>` +
+			`<path d="M-7 -6L0 0L-7 6" ${st(W, 5)} transform="translate(${f(x1)} ${f(y1)}) rotate(${f(head + 90 * dir)}) scale(${dir} 1)"/></g>` : "";
+		return `<path d="M72 84v18M54 106h36" ${st(W, 6)}/><circle cx="72" cy="56" r="5" fill="${W}"/>` +
+			`<g transform="translate(72 56) rotate(${f(a)})">${desk}</g>` + arc;
+	},
+	nextpage: () =>
+		`<rect x="34" y="22" width="76" height="76" rx="8" ${soft(.14)} stroke="${W}" stroke-width="6"/>` +
+		`<path d="M61 39l20 21-20 21" ${st(W, 7)} transform="translate(${f(9 * wave(P))} 0)"/>`,
 };
 
 /** Animated art for a feature glyph. The whole icon bobs and pulses once per loop; details run twice. */

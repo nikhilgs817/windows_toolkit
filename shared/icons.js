@@ -324,10 +324,66 @@ function websiteFolderGlyph(ink, longitude) {
 	return folderShape + `<g fill="none" stroke="${ink}" stroke-width="3" stroke-linecap="round"><circle cx="72" cy="76" r="20"/><ellipse cx="72" cy="76" rx="${longitude.toFixed(2)}" ry="20"/><path d="M52 76h40M55 66h34M55 86h34"/></g>`;
 }
 
+/** Globe inside the folder spins on a tilted axis: meridians and land masses travel around it (one turn per loop half). */
+function spinningWebsiteFolder(ink, phase) {
+	const f = (n) => n.toFixed(2), turn = (phase * 2) % 1, id = "wfg" + (++uid).toString(36);
+	const cx = 72, cy = 76, r = 20;
+	let meridians = "";
+	for (let i = 0; i < 4; i++) {
+		const lam = (((turn + i / 4) % 1)) * Math.PI; // front-facing meridians, 45° apart; repeats every quarter turn
+		const c = Math.cos(lam), rx = Math.abs(c) * r;
+		meridians += rx < .6 ? `<path d="M${cx} ${cy - r}V${cy + r}"/>` : `<path d="M${cx} ${cy - r}A${f(rx)} ${r} 0 0 ${c > 0 ? 1 : 0} ${cx} ${cy + r}" opacity="${f(.45 + .55 * Math.sin(lam))}"/>`;
+	}
+	// Land shapes ride around the sphere: squeezed at the edges, hidden on the far side.
+	const land = [[0, -6, 8, 6], [.4, 7, 7, 5], [.7, -2, 5, 4]].map(([o, dy, w, h]) => {
+		const lam = (turn + o) * Math.PI * 2, s = Math.sin(lam);
+		if (s <= .05) return "";
+		return `<ellipse cx="${f(cx + (r - 3) * Math.cos(lam))}" cy="${cy + dy}" rx="${f(w * s)}" ry="${h}" fill="${ink}" opacity="${f(.85 * Math.min(1, s * 2))}"/>`;
+	}).join("");
+	return folderShape +
+		`<clipPath id="${id}"><circle cx="${cx}" cy="${cy}" r="${r - 1.5}"/></clipPath>` +
+		`<g transform="rotate(-18 ${cx} ${cy})"><g clip-path="url(#${id})">${land}</g>` +
+		`<g fill="none" stroke="${ink}" stroke-width="3" stroke-linecap="round"><circle cx="${cx}" cy="${cy}" r="${r}"/>${meridians}<path d="M${cx - r} ${cy}h${2 * r}M${cx - 17} ${cy - 10}h34M${cx - 17} ${cy + 10}h34"/></g>` +
+		`<path d="M${cx} ${cy - r - 5}v4M${cx} ${cy + r + 1}v4" stroke="${ink}" stroke-width="3" stroke-linecap="round"/></g>` +
+		`<circle cx="${f(cx - 8)}" cy="${f(cy - 9)}" r="4" fill="${W}" opacity=".55"/>`;
+}
+
+const smooth = (t) => { t = Math.min(1, Math.max(0, t)); return t * t * (3 - 2 * t); };
+
+/** Copy: a duplicate peels off the page, slides out while its lines print in, then tucks back. */
+function copyArt(ink, phase) {
+	const f = (n) => n.toFixed(2), p = (phase * 2) % 1;
+	const out = p < .5 ? smooth((p - .08) / .3) : 1 - smooth((p - .62) / .3);
+	const write = smooth((p - .2) / .25) * (p < .62 ? 1 : 1 - smooth((p - .62) / .15));
+	const lines = [[32, 1], [32, 1], [20, 1]].map(([w], i) => {
+		const k = Math.min(1, Math.max(0, write * 3 - i));
+		return k > 0 ? `<path d="M70 ${60 + i * 13}h${f(w * k)}" ${stroke(ink, 5)}/>` : "";
+	}).join("");
+	const dx = 4 + out * 8, dy = -3 - out * 6, tilt = out * 6;
+	const trail = out > .05 && out < .95 ? `<rect x="${f(58 + dx * .5)}" y="${f(40 + dy * .5)}" width="56" height="66" rx="9" fill="none" stroke="${W}" stroke-width="2" stroke-dasharray="5 6" opacity="${f(.6 * Math.sin(Math.PI * out))}"/>` : "";
+	return `<rect x="30" y="22" width="54" height="64" rx="9" ${soft(.5)}/><path d="M40 40h30M40 52h30M40 64h20" ${stroke(W, 4)} opacity=".55"/>` + trail +
+		`<g transform="translate(${f(dx)} ${f(dy)}) rotate(${f(tilt)} 86 73)"><rect x="58" y="40" width="56" height="66" rx="9" fill="${W}"/>${lines}</g>` +
+		(out > .9 ? `<g opacity="${f((out - .9) * 10)}"><circle cx="118" cy="34" r="9" fill="${W}"/><path d="M113 34l4 4 6-8" ${stroke(ink, 3)}/></g>` : "");
+}
+
+/** Paste: a page drops into the clipboard, the clip snaps shut and the lines fill in, then the page lifts away. */
+function pasteArt(ink, phase) {
+	const f = (n) => n.toFixed(2), p = (phase * 2) % 1;
+	const land = smooth((p - .05) / .25), leave = smooth((p - .72) / .22);
+	const drop = -46 * (1 - land) - 30 * leave, op = Math.min(land * 1.4, 1) * (1 - leave);
+	const snap = p > .28 && p < .4 ? Math.sin((p - .28) / .12 * Math.PI) : 0;
+	const fill = smooth((p - .32) / .25) * (1 - leave);
+	const lines = [44, 44, 28].map((w, i) => { const k = Math.min(1, Math.max(0, fill * 3 - i)); return k > 0 ? `<path d="M50 ${59 + i * 14}h${f(w * k)}" ${stroke(ink, 5)}/>` : ""; }).join("");
+	return `<rect x="32" y="30" width="80" height="76" rx="11" fill="${W}"/>` +
+		`<g transform="translate(0 ${f(drop)})" opacity="${f(op)}"><rect x="42" y="44" width="60" height="56" rx="6" fill="${ink}" opacity=".14"/></g>` + lines +
+		`<rect x="54" y="${f(20 + snap * 3)}" width="36" height="20" rx="7" fill="${ink}" stroke="${W}" stroke-width="4"/>` +
+		(snap > 0 ? `<path d="M46 ${f(24 + snap * 2)}l-6-4M98 ${f(24 + snap * 2)}l6-4" ${stroke(W, 3)} opacity="${f(snap)}"/>` : "");
+}
+
 /** Shape-specific motion stays inside the artwork area; labels never move. */
 function movingGlyph(glyph, art, ink, phase, breathe) {
 	const f = (n) => n.toFixed(2);
-	if (glyph === "websitefolder") return websiteFolderGlyph(ink, 6 + breathe * 5);
+	if (glyph === "websitefolder") return spinningWebsiteFolder(ink, phase);
 	if (glyph === "folder") {
 		return `<path d="M24 40a8 8 0 0 1 8-8h22l11 9h47a8 8 0 0 1 8 8v48H24Z" ${soft(.55)}/>` +
 			`<g transform="translate(0 ${f(-breathe * 7)})"><rect x="51" y="35" width="42" height="51" rx="5" ${soft(.9)}/><path d="M60 46h24M60 55h18" ${stroke(ink, 3)}/></g>` +
@@ -344,8 +400,8 @@ function movingGlyph(glyph, art, ink, phase, breathe) {
 		const waves = ["M74 48a20 20 0 0 1 0 28", "M84 38a34 34 0 0 1 0 48"].map((d, i) => `<path d="${d}" ${stroke(W, 6)} opacity="${f(.28 + .72 * (1 - Math.cos(phase * Math.PI * 2 - i * .8)) / 2)}"/>`).join("");
 		return speaker + waves + `<path d="${glyph === 'volup' ? 'M114 50v24M102 62h24' : 'M102 62h24'}" ${stroke(W, 8)}/>`;
 	}
-	if (glyph === "copy") return `<rect x="30" y="22" width="54" height="64" rx="9" ${soft(.5)}/><g transform="translate(${f(breathe * 4)} ${f(-breathe * 3)})"><rect x="58" y="40" width="56" height="66" rx="9" fill="${W}"/><path d="M70 60h32M70 73h32M70 86h20" ${stroke(ink, 5)}/></g>`;
-	if (glyph === "paste") return `<rect x="32" y="30" width="80" height="76" rx="11" fill="${W}"/><rect x="54" y="20" width="36" height="20" rx="7" fill="${ink}" stroke="${W}" stroke-width="4"/><g transform="translate(0 ${f(breathe * 4)})"><path d="M50 59h44M50 73h44M50 87h28" ${stroke(ink, 5)}/></g>`;
+	if (glyph === "copy") return copyArt(ink, phase);
+	if (glyph === "paste") return pasteArt(ink, phase);
 	if (glyph === "back" || glyph === "vback") return `<circle cx="72" cy="60" r="40" ${soft(.16)} stroke="${W}" stroke-width="5"/><path d="M80 38L58 60l22 22" ${stroke(W, 9)} transform="translate(${f(-breathe * 5)} 0)"/>`;
 	if (glyph === "globe") return `<circle cx="72" cy="60" r="38" ${soft(.18)} stroke="${W}" stroke-width="6"/><ellipse cx="72" cy="60" rx="${f(9 + breathe * 14)}" ry="38" ${stroke(W, 5)}/><path d="M34 60h76M40 41h64M40 79h64" ${stroke(W, 5)}/>`;
 	if (glyph === "link") return `<g transform="rotate(${f(Math.sin(phase * Math.PI * 2) * 4)} 72 62)">${art}</g>`;

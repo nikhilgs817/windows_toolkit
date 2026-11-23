@@ -13,7 +13,7 @@ const output = join(root, "test-output");
 mkdirSync(output, { recursive: true });
 const server = createServer((req, res) => {
 	const name = new URL(req.url, "http://localhost").pathname.slice(1) || "pi.html";
-	if (!["pi.html", "pi.js", "pi.css", "icons.js", "companion.js"].includes(name)) { res.writeHead(404).end(); return; }
+	if (!["pi.html", "pi.js", "pi.css", "icons.js", "companion.js", "features.js"].includes(name)) { res.writeHead(404).end(); return; }
 	res.setHeader("Content-Type", ({ ".html": "text/html", ".js": "text/javascript", ".css": "text/css" })[extname(name)]);
 	res.end(readFileSync(join(ui, name)));
 });
@@ -97,7 +97,23 @@ try {
 	assert.equal(await page.locator("#screenPick").inputValue(), "monitor-three");
 	assert.match(await page.locator('#screenPick option:checked').textContent(), /not connected/);
 	console.log("PASS  unplugging a chosen monitor keeps that selection without falling back to another screen");
-	for (const id of ["screenshot", "showdesktop", "downloads", "appsfolder", "websitefolder", "website", "copy", "paste", "volup", "voldown", "back", "monitorcontrol", "app", "folder"]) {
+	await page.goto(`http://127.0.0.1:${server.address().port}/pi.html`);
+	await page.evaluate(() => window.connectElgatoStreamDeckSocket(12345, "test-inspector", "registerPropertyInspector", "{}", JSON.stringify({ action: "com.windowstoolkit.core.nextpage", payload: { settings: {} } })));
+	assert.equal(await page.locator("#ff-profile").inputValue(), "Core");
+	assert.equal(await page.locator("#preview svg text").last().textContent(), "NEXT");
+	await page.locator("#ff-profile").selectOption("Trading");
+	await page.waitForFunction(() => window.savedSettings.at(-1)?.profile === "Trading");
+	console.log("PASS  Next Page previews its icon and saves the selected Toolkit profile");
+	await page.goto(`http://127.0.0.1:${server.address().port}/pi.html`);
+	await page.evaluate(() => window.connectElgatoStreamDeckSocket(12345, "test-inspector", "registerPropertyInspector", "{}", JSON.stringify({ action: "com.windowstoolkit.core.rotate", payload: { settings: {} } })));
+	await page.waitForSelector("#screenPick", { state: "visible" });
+	assert.equal(await page.locator("#sleep").isVisible(), false);
+	assert.equal(await page.locator("#ff-direction").inputValue(), "normal");
+	await page.locator("#ff-direction").selectOption("flipped");
+	await page.waitForFunction(() => window.savedSettings.at(-1)?.direction === "flipped");
+	console.log("PASS  Rotate Display shows the monitor picker without the sleep option and saves the portrait direction");
+
+	for (const id of ["screenshot", "showdesktop", "downloads", "appsfolder", "websitefolder", "website", "copy", "paste", "volup", "voldown", "back", "monitorcontrol", "app", "folder", "nextpage"]) {
 		await page.goto(`http://127.0.0.1:${server.address().port}/pi.html`);
 		await page.evaluate((id) => window.connectElgatoStreamDeckSocket(12345, "test-inspector", "registerPropertyInspector", "{}", JSON.stringify({ action: "com.windowstoolkit.core." + id, payload: { settings: {} } })), id);
 		await page.waitForSelector("#motionRow", { state: "visible" });

@@ -11,8 +11,8 @@ $ErrorActionPreference = 'Stop'
 $script:PluginId = 'com.windowstoolkit.core'
 # Older names of this plugin. They are backed up and removed so Stream Deck does not show two copies.
 $script:RetiredPluginIds = @('com.dailyops.v2')
-$script:ReleaseVersion = '3.0.0.0'
-$script:ReleaseBase = 'https://github.com/nikhilgs817/windows_toolkit/releases/download/v3.0.0'
+$script:ReleaseVersion = '3.0.1.0'
+$script:ReleaseBase = 'https://github.com/nikhilgs817/windows_toolkit/releases/download/v3.0.1'
 $script:LogFile = $null
 
 function Write-Step([string]$Message) {
@@ -137,9 +137,16 @@ function Stop-DeckForInstall([string]$PluginsRoot) {
     foreach ($process in @(Get-Process -Name StreamDeck -ErrorAction SilentlyContinue)) { $null = $process.CloseMainWindow() }
     Start-Sleep -Milliseconds 1200
     Get-Process -Name StreamDeck -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction Stop
-    foreach ($process in @(Get-CimInstance Win32_Process)) {
-        if ($process.CommandLine -and $process.CommandLine.IndexOf($PluginsRoot, [StringComparison]::OrdinalIgnoreCase) -ge 0 -and $process.CommandLine.Contains('-pluginUUID')) { Stop-Process -Id $process.ProcessId -Force -ErrorAction SilentlyContinue }
+    $all = @(Get-CimInstance Win32_Process)
+    $pluginIds = @()
+    foreach ($process in $all) {
+        if ($process.CommandLine -and $process.CommandLine.IndexOf($PluginsRoot, [StringComparison]::OrdinalIgnoreCase) -ge 0 -and $process.CommandLine.Contains('-pluginUUID')) { $pluginIds += $process.ProcessId; Stop-Process -Id $process.ProcessId -Force -ErrorAction SilentlyContinue }
     }
+    # Background PowerShell helpers started by those plugins keep the plugin folder open; stop only those children.
+    $helpers = @($all | Where-Object { $pluginIds -contains $_.ParentProcessId -and $_.Name -eq 'powershell.exe' })
+    foreach ($helper in $helpers) { Stop-Process -Id $helper.ProcessId -Force -ErrorAction SilentlyContinue }
+    $deadline = (Get-Date).AddSeconds(10)
+    while ((Get-Date) -lt $deadline -and @($helpers + @($pluginIds | ForEach-Object { [pscustomobject]@{ ProcessId = $_ } }) | Where-Object { Get-Process -Id $_.ProcessId -ErrorAction SilentlyContinue }).Count -gt 0) { Start-Sleep -Milliseconds 250 }
 }
 function Start-DeckAfterInstall([string]$ExePath) { $null = Start-Process -FilePath $ExePath -WindowStyle Hidden -PassThru }
 function Test-ReadyRecord($Record, [int]$ProcessId, [DateTimeOffset]$StartedAfter) {

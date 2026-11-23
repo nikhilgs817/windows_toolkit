@@ -131,6 +131,7 @@ export function makeFeatureActions(): (new () => ToolkitAction<FeatureSettings>)
 					case "powerplan": return d.plan ? String(d.plan).replace(/^(Ultimate|High) performance$/i, "Performance").slice(0, 14) : undefined;
 					case "brightup": case "brightdown": return d.level !== undefined ? `Bright ${d.level}%` : undefined;
 					case "stopwatch": return d.text ? String(d.text) : undefined;
+					case "rotate": return s.screenNumber ? `Monitor ${s.screenNumber}` : undefined;
 					case "toscreen": return `To Screen ${setting(s, "screen") ?? 1}`;
 					case "persona": return String(setting(s, "profile") ?? "Developer");
 					case "page": return s.iconLabel ? undefined : `Page ${setting(s, "page") ?? 2}`;
@@ -215,7 +216,7 @@ export function makeFeatureActions(): (new () => ToolkitAction<FeatureSettings>)
 	return classes;
 }
 /** Keys whose own picture changes on press do not also flash ✓. */
-const SILENT = new Set(["page", "mute", "micmute", "ontop", "timer", "stopwatch", "pomodoro", "record", "bell", "wifiradio", "bluetooth", "airplane", "gamemode", "powerplan", "output", "input", "appvol", "textcase", "persona", "runcmd"]);
+const SILENT = new Set(["nextpage", "page", "mute", "micmute", "ontop", "timer", "stopwatch", "pomodoro", "record", "bell", "wifiradio", "bluetooth", "airplane", "gamemode", "powerplan", "output", "input", "appvol", "textcase", "persona", "runcmd"]);
 
 function resetClock(id: string, k: KeyState, s: FeatureSettings): void {
 	k.run = undefined;
@@ -228,6 +229,10 @@ async function press(id: string, s: FeatureSettings, k: KeyState): Promise<PsRes
 	const v = (key: string, def = "") => (s[key] === undefined || s[key] === "" ? def : String(s[key]));
 	switch (id) {
 		case "dispset": return ps.run("url", ["ms-settings:display"]);
+		case "rotate": {
+			if (!v("screenKey")) return miss("Choose a monitor in this key's settings first.");
+			return ps.run("mrotate", [v("screenKey"), v("direction", "normal")], 15_000);
+		}
 		case "nightlight": return ps.run("url", ["ms-settings:nightlight"]);
 		case "hdr": return chord(91, 18, 66);
 		case "brightup": case "brightdown": {
@@ -353,6 +358,7 @@ async function press(id: string, s: FeatureSettings, k: KeyState): Promise<PsRes
 		}
 		case "toscreen": { const r = await ps.run("movewin", [v("screen", "1")]); if (r.status === "ok") { const [from, to] = r.message.split(","); k.data.from = Number(from); k.data.n = Number(to); } return r; }
 		case "persona": return openPersona(v("profile", "Developer"), 0);
+		case "nextpage": return openPersona(v("profile", "Core"), 1);
 		case "page": return openPersona(v("profile", "Core"), num(s.page, 2, 1, 3) - 1);
 	}
 	return miss("Not available");

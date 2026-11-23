@@ -10,7 +10,7 @@ import { FEATURES, GROUPS } from "./features.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const sd = join(here, "com.windowstoolkit.core.sdPlugin");
-const VERSION = "3.0.0.0";
+const VERSION = "3.0.1.0";
 const PRODUCT_NAME = "Windows Toolkit";
 
 /** id → [Name in action list, tooltip] — order = order in the Stream Deck action list. */
@@ -64,29 +64,30 @@ const APPS_LAYOUT = {
 };
 const APPS_PROFILE = "profiles/Apps"; // must match nav.ts APPS_PROFILE
 const P = (o) => o; // readability: [action, settings]
+const nextPage = (profile) => ["nextpage", { profile }];
 const page = (profile, n, label) => ["page", { profile, page: String(n), ...(label ? { iconLabel: label } : {}) }];
 const persona = (name, theme) => ["persona", { profile: name, iconTheme: theme }];
 const grid = (rows) => Object.fromEntries(rows.flatMap((row, r) => row.map((v, c) => [`${c},${r}`, v]).filter(([, v]) => v)));
 /** Persona profiles (approved Nov 2026). Each has Back to the main keys and a second page. */
 const PERSONAS = {
 	Core: { title: "Windows Toolkit", pages: [
-		grid([["appsfolder", "websitefolder", "screenshot", "showdesktop", "dispset"], ["mute", "volup", "voldown", "micmute", "playpause"], ["lockpc", "cliphist", "copy", "paste", page("Core", 2, "More ›")]]),
+		grid([["appsfolder", "websitefolder", "screenshot", "showdesktop", "dispset"], ["mute", "volup", "voldown", "micmute", "playpause"], ["lockpc", "cliphist", "copy", "paste", nextPage("Core")]]),
 		grid([[page("Core", 1, "‹ Main"), persona("Developer", "tropical"), persona("Podcast", "crimson"), persona("Gaming", "electric"), persona("Trading", "mint")], ["monitorcontrol", "nightlight", "hdr", "brightdown", "brightup"], ["project", "nextscreen", "snap", "vdesk", "taskview"]]),
 	] },
 	Developer: { title: "Developer", pages: [
-		grid([["back", "terminal", "runcmd", "portcheck", "shortcut"], ["cpu", "ram", "gpu", "netdown", "topapp"], ["snippet", "guid", "timestamp", "cliptools", page("Developer", 2, "More ›")]]),
+		grid([["back", "terminal", "runcmd", "portcheck", "shortcut"], ["cpu", "ram", "gpu", "netdown", "topapp"], ["snippet", "guid", "timestamp", "cliptools", nextPage("Developer")]]),
 		grid([[page("Developer", 1, "‹ Back"), "workspace", "pomodoro", "timer", "stopwatch"], ["ontop", "snap", "nextscreen", "vdesk", "taskview"], ["cliphist", "textcase", "clock", "worldclock", "lockpc"]]),
 	] },
 	Podcast: { title: "Podcast", pages: [
-		grid([["back", "micmute", "ptt", "miclevel", "mute"], ["input", "output", "appvol", "mixer", "soundboard"], ["prev", "playpause", "next", "stopwatch", page("Podcast", 2, "More ›")]]),
+		grid([["back", "micmute", "ptt", "miclevel", "mute"], ["input", "output", "appvol", "mixer", "soundboard"], ["prev", "playpause", "next", "stopwatch", nextPage("Podcast")]]),
 		grid([[page("Podcast", 1, "‹ Back"), "record", "timer", "dnd", "screensoff"], ["volup", "voldown", "brightdown", "brightup", "nightlight"], ["clock", "worldclock", "cpu", "netup", "lockpc"]]),
 	] },
 	Gaming: { title: "Gaming", pages: [
-		grid([["back", "gamebar", "gamemode", "clip30", "record"], ["gameshot", "perf", "hdr", "powerplan", "micmute"], ["cpu", "gpu", "ram", "ping", page("Gaming", 2, "More ›")]]),
+		grid([["back", "gamebar", "gamemode", "clip30", "record"], ["gameshot", "perf", "hdr", "powerplan", "micmute"], ["cpu", "gpu", "ram", "ping", nextPage("Gaming")]]),
 		grid([[page("Gaming", 1, "‹ Back"), "output", "input", "mute", "appvol"], ["netdown", "netup", "topapp", "closeapp", "forceclose"], ["volup", "voldown", "playpause", "next", "screensoff"]]),
 	] },
 	Trading: { title: "Trading", pages: [
-		grid([["back", "market", "bell", "journal", "screenshot"], [["toscreen", { screen: "1" }], ["toscreen", { screen: "2" }], ["toscreen", { screen: "3" }], "snap", "ontop"], [["worldclock", { tz: "America/New_York", city: "NYC" }], "clock", "timer", "lockpc", page("Trading", 2, "More ›")]]),
+		grid([["back", "market", "bell", "journal", "screenshot"], [["toscreen", { screen: "1" }], ["toscreen", { screen: "2" }], ["toscreen", { screen: "3" }], "snap", "ontop"], [["worldclock", { tz: "America/New_York", city: "NYC" }], "clock", "timer", "lockpc", nextPage("Trading")]]),
 		grid([[page("Trading", 1, "‹ Back"), "dnd", "nextscreen", "vdesk", "taskview"], ["cpu", "ram", "netdown", "ping", "uptime"], ["micmute", "mute", "playpause", "cliphist", "screensoff"]]),
 	] },
 };
@@ -126,6 +127,10 @@ const manifest = {
 	})),
 };
 copyUi(sd);
-write("ui/features.js", "window.WinToolkitFeatures=" + JSON.stringify({ groups: GROUPS, features: FEATURES }) + ";\n");
+write("ui/features.js", `window.WinToolkitFeatures = ${JSON.stringify({ groups: GROUPS, features: FEATURES })};
+for (const { id, glyph, theme, label, name } of window.WinToolkitFeatures.features) {
+	window.WinToolkitIcons.PRESET_ICONS[id] = { glyph, theme, label: label ?? name };
+}
+`);
 write("manifest.json", JSON.stringify(manifest, null, "\t") + "\n");
 console.log(`Generated manifest + ${ACTIONS.length} actions`);

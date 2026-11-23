@@ -10,7 +10,7 @@ Everything uses Windows' own features. There are no accounts, cloud services or 
 
 ## Profiles
 
-Pick one from Stream Deck's profile list, or press its key on page 2 of **Windows Toolkit**. Every profile has a second page (**More ›**) and a **Back** key to your main keys.
+Pick one from Stream Deck's profile list, or press its key on page 2 of **Windows Toolkit**. The animated **Next Page** key opens page 2 of the selected Toolkit profile. The **Back** key returns to your main keys.
 
 | Profile | Page 1 | Page 2 |
 |---|---|---|
@@ -26,7 +26,7 @@ Pick one from Stream Deck's profile list, or press its key on page 2 of **Window
 
 | Group | Keys |
 |---|---|
-| **Display & Windows** | Display Settings, Night Light (opens its toggle), HDR, Brightness +/− (laptop and DDC/CI monitors), Project, Next Screen, Snap, Always on Top, Virtual Desktop, Task View, Clipboard History, Emoji, Lock PC, Sleep Screens |
+| **Display & Windows** | Display Settings, Rotate Display (landscape ↔ portrait for a chosen monitor), Night Light (opens its toggle), HDR, Brightness +/− (laptop and DDC/CI monitors), Project, Next Screen, Snap, Always on Top, Virtual Desktop, Task View, Clipboard History, Emoji, Lock PC, Sleep Screens |
 | **Audio** | Mute (shows state), Mic Mute (red On Air while live), Push to Talk, live Mic Level, Switch Output, Switch Input, App Volume (one app), Volume Mixer, Soundboard, Previous / Play-Pause / Next |
 | **System Monitor** (live, every second) | CPU, Memory, GPU, Disk Activity, Disk Free, Download, Upload, Ping, Wi-Fi Signal, Battery, Uptime, Top App, Processes, Task Manager, Resource Monitor. Rings turn amber above 60% and red above 85% |
 | **Power & Control** | Sleep, Restart, Shut Down, Sign Out, Hibernate, Force Close, Restart Service and Empty Recycle Bin need a **1-second hold**: a red ring fills, and a tap only warns. Also Power Plan (shows the plan), Close App, Wi-Fi / Bluetooth / Airplane on-off (shows state), Do Not Disturb (opens its toggle) |
@@ -64,6 +64,7 @@ The bundled editable **Apps** and **Websites** profiles each start with Back and
 - **Show Desktop**: show the desktop; press again to restore your windows.
 - **Volume Up** and **Volume Down**: adjust volume, with optional hold to repeat.
 - **Monitor Control**: choose one physical monitor per key. A connected screen shows red **TURN OFF**; a disconnected screen shows green **TURN ON**. The main display can be disconnected while another screen remains active. The last active screen stays on.
+- **Rotate Display**: choose one physical monitor per key, then press to switch it between landscape and portrait. Set Portrait to 90° or flipped (270°). Only that screen changes; if Windows does not confirm the rotation, the key warns and nothing changes.
 - **Copy** and **Paste**: send Ctrl+C and Ctrl+V to the active window.
 
 Launcher gestures select monitor 1 with a tap, monitor 2 with a double-tap and monitor 3 with a hold. Adjust monitor ordering and timing, or disable gestures, in **Which monitor**. Some apps manage their own window placement.

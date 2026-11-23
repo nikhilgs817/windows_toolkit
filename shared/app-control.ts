@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { homedir } from "node:os";
 import { appendFileSync } from "node:fs";
 import type { AppSelector } from "./companion-specs.js";
 import type { PsResult } from "./ps.js";
@@ -69,7 +70,7 @@ export function controlApp(data: AppControl): Promise<PsResult> {
 	}
 	return new Promise((resolve) => {
 		const bootstrap = "$s=[Console]::In.ReadLine(); & ([ScriptBlock]::Create([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($s))))";
-		const worker = spawn("powershell.exe", ["-NoLogo", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-EncodedCommand", Buffer.from(bootstrap, "utf16le").toString("base64")], { windowsHide: true, stdio: ["pipe", "pipe", "pipe"] });
+		const worker = spawn("powershell.exe", ["-NoLogo", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-EncodedCommand", Buffer.from(bootstrap, "utf16le").toString("base64")], { windowsHide: true, stdio: ["pipe", "pipe", "pipe"], cwd: homedir() });
 		let output = "", done = false;
 		const finish = (result: PsResult) => { if (done) return; done = true; clearTimeout(timer); resolve(result); };
 		const timer = setTimeout(() => { worker.kill(); finish({ status: "err", message: "The app did not respond. No further control was sent." }); }, 15000);

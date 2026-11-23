@@ -3,6 +3,7 @@ import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { Resvg } from "@resvg/resvg-js";
 import ts from "typescript";
 import { keySvg, monitorKeySvg, pictureKeySvg, PRESET_ICONS } from "../shared/icons.js";
+import { FEATURES } from "../plugins/windowstoolkit/features.mjs";
 
 const raster = (svg) => Buffer.from(new Resvg(svg, { font: { loadSystemFonts: false, ...(process.platform === "win32" ? { fontFiles: [process.env.WINDIR + "/Fonts/segoeuib.ttf"] } : {}) } }).render().pixels);
 const image = "data:image/png;base64," + readFileSync(new URL("../plugins/windowstoolkit/assets/windows-toolkit-master.png", import.meta.url)).toString("base64");
@@ -17,6 +18,25 @@ for (const [kind, preset] of Object.entries(PRESET_ICONS)) {
 	}
 }
 console.log(`PASS ${looks} main/companion looks render changing pixels and seamless six-second loops`);
+const nextPage = FEATURES.find((feature) => feature.id === "nextpage");
+assert.ok(nextPage, "Next Page is missing from the action catalogue");
+for (const style of ["neon", "vivid", "pro"]) {
+	const render = (phase) => keySvg({ ...nextPage, style, motion: { kind: nextPage.id, phase } });
+	const first = raster(render(0));
+	assert.match(render(0), />NEXT<\/text>/);
+	assert.equal(first.equals(raster(render(.25))), false, `Next Page/${style} does not animate`);
+	assert.equal(first.equals(raster(render(1))), true, `Next Page/${style} has a loop seam`);
+}
+console.log("PASS Next Page animates and loops seamlessly in all three looks");
+for (const [name, spec] of [["Rotate Display", { ...FEATURES.find((x) => x.id === "rotate"), motion: { kind: "rotate" } }], ["Copy", { ...PRESET_ICONS.copy, motion: { kind: "copy" } }], ["Paste", { ...PRESET_ICONS.paste, motion: { kind: "paste" } }], ["Website Folder", { ...PRESET_ICONS.websitefolder, motion: { kind: "websitefolder" } }]]) {
+	for (const style of ["neon", "vivid", "pro"]) {
+		const render = (phase) => raster(keySvg({ ...spec, style, motion: { ...spec.motion, phase } }));
+		const first = render(0);
+		assert.equal(first.equals(render(.17)), false, `${name}/${style} does not animate`);
+		assert.equal(first.equals(render(1)), true, `${name}/${style} has a loop seam`);
+	}
+}
+console.log("PASS Rotate Display, Copy, Paste and Website Folder animate and loop seamlessly in all three looks");
 for (const render of [
 	(phase) => keySvg({ glyph: "rocket", theme: "ocean", style: "real", image, label: "Sample App", motion: { kind: "app", phase } }),
 	(phase) => pictureKeySvg(image, { kind: "picture", phase }),

@@ -1,5 +1,13 @@
 # Changes
 
+## Windows Toolkit 3.0.1.0 — 2026-11-23
+
+- New **Rotate Display** key (Display & Windows): choose a monitor from the list and press to switch it between landscape and portrait. Portrait can be 90° or flipped (270°). Only that screen changes; if Windows doesn't confirm the rotation, the key warns and nothing changes. Animated pivot-monitor icon in every look and colour theme.
+- Redesigned **Copy**, **Paste** and **Website Folder** animations: the copy peels off and slides out, the page drops into the clipboard, and the globe inside the folder spins.
+- Apps opened from keys no longer start inside the plugin folder, which could block updates. The installer also stops the plugin's background helpers before updating.
+
+- Added an animated **Next Page** key with the Toolkit's looks and colour themes. It's on page 1 of the five bundled Toolkit profiles.
+
 ## Windows Toolkit 3.0.0.0 — 2026-11-05
 
 - **Renamed** to Windows Toolkit, including the internal ID (`com.windowstoolkit.core`) and the GitHub repository (`windows_toolkit`). The installer backs up and removes the old `com.dailyops.v2` plugin; keys made with it must be added again (the new profiles cover most of them).

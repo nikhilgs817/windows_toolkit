@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { homedir } from "node:os";
 import type { AppSettings } from "./base.js";
 import type { PsResult } from "./ps.js";
 import { LOGIN_WORKER } from "./credentials-native.js";
@@ -25,7 +26,7 @@ export async function fillAppCredentials(s: AppSettings): Promise<PsResult> {
 	filling = true;
 	try {
 		return await new Promise<PsResult>((resolve) => {
-			const proc = spawn("powershell.exe", ["-NoLogo", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-EncodedCommand", Buffer.from(LOGIN_WORKER, "utf16le").toString("base64")], { windowsHide: true, stdio: ["pipe", "pipe", "pipe"] });
+			const proc = spawn("powershell.exe", ["-NoLogo", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-EncodedCommand", Buffer.from(LOGIN_WORKER, "utf16le").toString("base64")], { windowsHide: true, stdio: ["pipe", "pipe", "pipe"], cwd: homedir() });
 			let output = "", done = false, timedOut = false;
 			const finish = (code: string) => { if (done) return; done = true; clearTimeout(timer); if (code !== "ok") proc.kill(); resolve(code === "ok" ? { status: "ok", message: "Credentials filled. Submit the login in the app." } : { status: "err", message: failures[code] || failures.unavailable }); };
 			const timer = setTimeout(() => { timedOut = true; proc.kill(); }, 20000);

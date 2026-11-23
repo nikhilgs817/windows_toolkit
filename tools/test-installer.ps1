@@ -19,7 +19,7 @@ try {
     $payload = Join-Path $payloadUnpack 'com.windowstoolkit.core.sdPlugin'
     $manifest = Test-PluginPayload $payload
     Check 'real packaged payload has the current identity and version' ($manifest.UUID -eq $script:PluginId -and $manifest.Version -eq $script:ReleaseVersion)
-    Check 'three bundled layouts include a starter profile' ($manifest.Profiles.Count -eq 3 -and @($manifest.Profiles.Name) -contains 'profiles/WindowsToolkit')
+    Check 'seven bundled layouts include the Core starter profile' ($manifest.Profiles.Count -eq 7 -and @($manifest.Profiles.Name) -contains 'profiles/Core')
     $started = [DateTimeOffset]::UtcNow.AddSeconds(-5)
     Check 'startup receipt accepts only the new connected process' (Test-ReadyRecord ([pscustomobject]@{pid=123;readyAt=[DateTimeOffset]::UtcNow.ToString('o')}) 123 $started)
     Check 'stale startup receipt is rejected' (-not (Test-ReadyRecord ([pscustomobject]@{pid=123;readyAt=$started.AddMinutes(-1).ToString('o')}) 123 $started))
@@ -53,18 +53,18 @@ try {
     $original = Join-Path $first 'ProfilesV3\FIXTURE.sdProfile\Profiles\PAGE\manifest.json'
     $before = Get-InstallFileHash $original
     $created = Install-ToolkitPayload $payload $first (Join-Path $tempRoot 'backups') $tempRoot $restart $runtime
-    Check 'first install adds all three missing device layouts' ($created.AddedProfiles -eq 3)
+    Check 'first install adds all seven missing device layouts' ($created.AddedProfiles -eq 7)
     Check 'existing keys, positions and settings remain byte-identical' ((Get-InstallFileHash $original) -eq $before)
     $appsHeader = @(Get-ChildItem -LiteralPath (Join-Path $first 'ProfilesV3') -Directory | Where-Object { (Get-Field (Read-Json (Join-Path $_.FullName 'manifest.json')) 'PreconfiguredName') -eq 'profiles/Apps' })[0]
     $customHeader = Read-Json (Join-Path $appsHeader.FullName 'manifest.json');$customHeader.Name = 'My customized collection';Write-Json (Join-Path $appsHeader.FullName 'manifest.json') $customHeader
     $customHash = Get-InstallFileHash (Join-Path $appsHeader.FullName 'manifest.json')
     $again = Install-ToolkitPayload $payload $first (Join-Path $tempRoot 'backups') $tempRoot $restart $runtime
-    Check 'repeat install does not duplicate profiles' ($again.AddedProfiles -eq 0 -and @(Get-ChildItem -LiteralPath (Join-Path $first 'ProfilesV3') -Directory).Count -eq 4)
+    Check 'repeat install does not duplicate profiles' ($again.AddedProfiles -eq 0 -and @(Get-ChildItem -LiteralPath (Join-Path $first 'ProfilesV3') -Directory).Count -eq 8)
     Check 'renamed existing collection is preserved' ((Get-InstallFileHash (Join-Path $appsHeader.FullName 'manifest.json')) -eq $customHash)
     $secondDevice = Join-Path $first 'ProfilesV3\SECOND.sdProfile';$null=New-Item -ItemType Directory -Path $secondDevice
     Write-Json (Join-Path $secondDevice 'manifest.json') @{Device=@{Model='20GBL9901';UUID='@(1)[SECOND]'};Name='Second deck';Version='3.0';Pages=@{Current='PAGE';Default='PAGE';Pages=@('PAGE')}}
     $second = Install-ToolkitPayload $payload $first (Join-Path $tempRoot 'backups') $tempRoot $restart $runtime
-    Check 'another compatible deck receives only its missing profiles' ($second.AddedProfiles -eq 3)
+    Check 'another compatible deck receives only its missing profiles' ($second.AddedProfiles -eq 7)
     $pageIds=@();$actionIds=@()
     foreach($folder in Get-ChildItem -LiteralPath (Join-Path $first 'ProfilesV3') -Directory){
         if(-not (Get-Field (Read-Json (Join-Path $folder.FullName 'manifest.json')) 'InstalledByPluginUUID')){continue}

@@ -1,4 +1,5 @@
 import streamDeck from "@elgato/streamdeck";
+import { homedir } from "node:os";
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { appendFileSync, existsSync, readFileSync } from "node:fs";
 import { HOST_SCRIPT } from "./host-script.js";
@@ -74,7 +75,7 @@ class PowerShellHost {
 		const proc = spawn(
 			"powershell.exe",
 			["-NoLogo", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-EncodedCommand", encoded],
-			{ windowsHide: true, stdio: ["pipe", "pipe", "pipe"] },
+			{ windowsHide: true, stdio: ["pipe", "pipe", "pipe"], cwd: homedir() },
 		);
 		proc.stdin.on("error", (e) => log.warn(`stdin: ${e.message}`));
 		proc.stdin.write(Buffer.from(compact, "utf8").toString("base64") + "\n");

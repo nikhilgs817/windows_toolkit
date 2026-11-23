@@ -95,6 +95,14 @@ try {
 	const appsArchive = unzipSync(readFileSync(join(sd, "profiles/Apps.streamDeckProfile")));
 	const bundledActions = Object.entries(appsArchive).filter(([path]) => path.endsWith("/manifest.json")).flatMap(([, bytes]) => JSON.parse(strFromU8(bytes)).Controllers?.flatMap((c) => Object.values(c.Actions || {})) || []);
 	check("bundled Apps page contains only Back and an unconfigured Open App", bundledActions.length === 2 && ["back", "app"].every((id) => bundledActions.some((a) => a.UUID === "com.windowstoolkit.core." + id)) && bundledActions.filter((a) => a.UUID.endsWith(".app")).every((a) => !a.Settings?.appId && !a.Settings?.target));
+	for (const profile of ["Core", "Developer", "Podcast", "Gaming", "Trading"]) {
+		const archive = unzipSync(readFileSync(join(sd, `profiles/${profile}.streamDeckProfile`)));
+		const firstPage = Object.entries(archive).filter(([path]) => path.endsWith("/manifest.json"))
+			.map(([, bytes]) => JSON.parse(strFromU8(bytes)))
+			.find((page) => page.Name === "" && page.Controllers?.[0].Actions);
+		const next = firstPage?.Controllers[0].Actions["4,2"];
+		check(`${profile} page 1 includes its own Next Page key`, next?.UUID === "com.windowstoolkit.core.nextpage" && next.Settings.profile === profile);
+	}
 	const websiteArchive = unzipSync(readFileSync(join(sd, "profiles/Websites.streamDeckProfile")));
 	const websiteActions = Object.entries(websiteArchive).filter(([path]) => path.endsWith("/manifest.json")).flatMap(([, bytes]) => JSON.parse(strFromU8(bytes)).Controllers?.flatMap((c) => Object.values(c.Actions || {})) || []);
 	check("plugin bundles an editable Websites page with Back and an unconfigured website", manifest.Profiles.some((p) => p.Name === "profiles/Websites" && p.Readonly === false) && websiteActions.length === 2 && websiteActions.some((a) => a.UUID.endsWith(".back")) && websiteActions.some((a) => a.UUID.endsWith(".website") && !a.Settings?.url));
@@ -579,7 +587,8 @@ function featureCases() {
 		guid: C((cmds) => cmds[0]?.command === "clip-set" && /^[0-9a-f-]{36}$/.test(cmds[0].args[0])), timestamp: C((cmds) => cmds[0]?.command === "clip-set" && /^\d{4}-\d\d-\d\dT/.test(cmds[0].args[0])),
 		cliptools: C((cmds) => cmds[0]?.command === "clip-get" && cmds[1]?.command === "clip-set", { op: "trim" }), textcase: C((cmds) => cmds[0]?.command === "clip-get" && cmds[1]?.args[0] === "HELLO WORLD"),
 		gamebar: C(chordIs("91,71")), gamemode: C(cmd("gamemode", "toggle")), clip30: C(chordIs("91,18,71")), record: C(chordIs("91,18,82")), gameshot: C(chordIs("91,18,44")), perf: C(chordIs("91,71")),
-		market: C(cmd("url", "ms-settings:dateandtime")), bell: C(none), journal: C(cmd("journal", undefined, "Took profit"), { text: "Took profit" }), toscreen: C(cmd("movewin", "2"), { screen: "2" }),
+		market: C(cmd("url", "ms-settings:dateandtime")), bell: C(none), journal: C(cmd("journal", undefined, "Took profit"), { text: "Took profit" }), toscreen: C(cmd("movewin", "2"), { screen: "2" }), rotate: C(cmd("mrotate", "test-screen", "flipped"), { screenKey: "test-screen", direction: "flipped" }),
+		nextpage: C(sw("profiles/Podcast", 1), { profile: "Podcast" }),
 		page: C(sw("profiles/Developer", 1), { profile: "Developer", page: "2" }), persona: C(sw("profiles/Gaming", 0), { profile: "Gaming" }),
 	};
 }

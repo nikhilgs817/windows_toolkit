@@ -449,6 +449,36 @@ public static class WinToolkitDisplay {
 		return "[" + string.Join(",", outp.ToArray()) + "]";
 	}
 
+	// Orientation of one active screen: 1 landscape, 2 portrait, 3 landscape (flipped), 4 portrait (flipped).
+	public static string Orientation(string key) {
+		PATH[] paths; MODE[] modes; Query(QDC_ONLY_ACTIVE_PATHS, out paths, out modes);
+		foreach (PATH p in paths) if (KeyOf(p.tgt) == key) return p.tgt.rotation.ToString();
+		return "";
+	}
+
+	// Switch the selected screen between landscape and portrait (flipped = 270 degrees). Only that screen changes.
+	public static string Rotate(string key, bool flipped) {
+		PATH[] paths; MODE[] modes; Query(QDC_ONLY_ACTIVE_PATHS, out paths, out modes);
+		int idx = -1;
+		for (int i = 0; i < paths.Length; i++) if (KeyOf(paths[i].tgt) == key) { idx = i; break; }
+		if (idx < 0) throw new Exception("The selected monitor isn't on. Turn it on or choose another monitor.");
+		uint cur = paths[idx].tgt.rotation;
+		bool portraitNow = cur == 2 || cur == 4;
+		uint want = portraitNow ? 1u : (flipped ? 4u : 2u);
+		paths[idx].tgt.rotation = want;
+		uint mi = paths[idx].src.modeInfoIdx;
+		if (mi < modes.Length && modes[mi].infoType == 1) {
+			// The desktop area turns with the screen, so swap its width and height.
+			uint w = modes[mi].width, h = modes[mi].height;
+			bool wide = w > h;
+			if (wide != portraitNow) { modes[mi].width = h; modes[mi].height = w; }
+		}
+		int r = SetDisplayConfig((uint)paths.Length, paths, (uint)modes.Length, modes, SDC_APPLY | SDC_USE_SUPPLIED | SDC_SAVE | SDC_ALLOW_CHANGES);
+		if (r != 0) throw new Exception("Windows didn't accept the rotation (error " + r + "). The screen was left as it was.");
+		if (Orientation(key) != want.ToString()) throw new Exception("Windows didn't confirm the rotation. The screen was left as it was.");
+		return want == 1 ? "landscape" : "portrait";
+	}
+
 	public static bool IsOn(string key) {
 		PATH[] paths; MODE[] modes; Query(QDC_ONLY_ACTIVE_PATHS, out paths, out modes);
 		foreach (PATH p in paths) if (KeyOf(p.tgt) == key) return true;
@@ -1098,6 +1128,8 @@ while ($true) {
 			'watchfg' { Ensure-Native; [WinToolkitWin]::WatchForeground(250); $msg = 'watching' }
 			'monitors' { Ensure-Native; $msg = [WinToolkitWin]::Describe($a[0]) }
 			'mlist' { Ensure-Native; $msg = [WinToolkitDisplay]::List() }
+			'mrotate' { Ensure-Native; $msg = [WinToolkitDisplay]::Rotate([string]$a[0], $a[1] -eq 'flipped') }
+			'morient' { Ensure-Native; $msg = [WinToolkitDisplay]::Orientation([string]$a[0]) }
 			'moff' { Ensure-Native; $msg = [WinToolkitDisplay]::Off($a[0], ($a[1] -eq '1')) }
 			'mon' {
 				# a[0] = screen key, a[1] = wake 1/0, a[2] = the Windows number it had before (0 = unknown)

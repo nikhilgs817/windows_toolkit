@@ -16,6 +16,8 @@
 	/** Windows Toolkit keys that hand the deck over to a companion plugin's keys (VS Code key, or any app key set to VS Code). */
 	const VSCODE_RE = /visual studio code|\bvs ?code\b|vscodium|\bcode( - insiders)?\.exe\b|Microsoft\.VisualStudioCode/i;
 	const MONITOR_KINDS = ["monitorcontrol"];
+	/** Keys that pick one physical monitor (Monitor Control, Rotate Display). */
+	const SCREEN_KINDS = ["monitorcontrol", "rotate"];
 	let motionTimer = null;
 	let screenList = null; // [{ key, name, on, num, primary }]
 
@@ -77,7 +79,7 @@
 		ws.onopen = () => {
 			ws.send(JSON.stringify({ event: registerEvent, uuid: piUuid }));
 			if (APP_KINDS.includes(kind)) requestApps();
-			if (MONITOR_KINDS.includes(kind)) sendToPlugin({ event: "getScreens" });
+			if (SCREEN_KINDS.includes(kind)) sendToPlugin({ event: "getScreens" });
 			if (LAUNCH_KINDS.includes(kind) || kind === "vsc-back" || window.WinToolkitCompanion) ws.send(JSON.stringify({ event: "getGlobalSettings", context: piUuid }));
 		};
 		ws.onmessage = (e) => {
@@ -332,13 +334,14 @@
 		show("sec-desktop", kind === "showdesktop");
 		show("motionRow", true);
 		$("animate").addEventListener("change", () => { settings.animate = $("animate").checked; save(); });
-		show("sec-screen", MONITOR_KINDS.includes(kind));
+		show("sec-screen", SCREEN_KINDS.includes(kind));
+		$("sleep").closest(".row").hidden = $("monitorOnOffHint").hidden = !MONITOR_KINDS.includes(kind);
 		show("sec-apps", kind === "appsfolder");
 		show("sec-websites", kind === "websitefolder");
 		$("openWebsites").addEventListener("click", () => sendToPlugin({ event: "openWebsites" }));
 		$("returnMain").addEventListener("click", () => sendToPlugin({ event: "returnMain" }));
 		show("sec-navback", kind === "back");
-		const monitorKey = MONITOR_KINDS.includes(kind);
+		const monitorKey = SCREEN_KINDS.includes(kind);
 		show("styleRow", !monitorKey);
 		show("pictureRow", !monitorKey);
 		show("artPickers", !monitorKey);
@@ -619,7 +622,7 @@
 			$("shotHold").value = String(s.holdSeconds || 1);
 			$("shotHoldLabel").textContent = String(s.holdSeconds || 1) + " s";
 		}
-		if (MONITOR_KINDS.includes(kind)) {
+		if (SCREEN_KINDS.includes(kind)) {
 			$("sleep").checked = s.sleep !== false;
 			renderScreens();
 		}
@@ -639,7 +642,7 @@
 	}
 
 	function renderScreens() {
-		if (!MONITOR_KINDS.includes(kind)) return;
+		if (!SCREEN_KINDS.includes(kind)) return;
 		const sel = $("screenPick");
 		const list = screenList || [];
 		const opts = [["", "Choose a monitor…", false]];
@@ -660,9 +663,12 @@
 		const st = $("screenStatus");
 		st.className = "hint";
 		if (screenList === null) { st.textContent = "Looking for screens…"; return; }
+		const rotating = kind === "rotate";
+		if (!settings.screenKey && rotating) { st.textContent = "Choose the monitor this key should turn between landscape and portrait. Add another Rotate Display key for a different screen."; return; }
 		if (!settings.screenKey) { st.textContent = "Choose the monitor this key should turn off and on. Add another Monitor Control key to control a different screen."; return; }
 		const target = list.find((x) => x.key === settings.screenKey);
 		if (!target) { st.className = "hint err"; st.textContent = "The selected monitor isn't connected. Check its cable, or choose a monitor above."; return; }
+		if (rotating) { st.textContent = target.on ? (target.name || "This screen") + " turns between landscape and portrait when you press the key." : (target.name || "This screen") + " is off. Turn it on before rotating it."; if (!target.on) st.className = "hint err"; return; }
 		st.textContent = (target.name || "This screen") + " is " + (target.on ? "on — the key shows red TURN OFF." : "off — the key shows green TURN ON.");
 		if (target.primary) st.textContent += " When turned off, another active screen becomes the main display.";
 	}
@@ -675,6 +681,7 @@
 			if (s.appName) return s.appName;
 			if (kind === "app" && s.target) return s.target.trim().split(/[\\/]/).pop().replace(/\.(exe|lnk|bat|cmd)$/i, "");
 		}
+		if (kind === "rotate" && s.screenKey) return "Monitor " + monitorN();
 		if (kind === "vsc-shortcut" && s.shortcut) return s.shortcut.trim();
 		if (kind === "vsc-command" && s.command) return s.command.trim().replace(/^.*?:\s*/, "");
 		if ((kind === "folder" && s.folderNameLabel !== false || kind === "downloads" && s.folderNameLabel === true || kind === "vsc-project") && s.folderPath) {

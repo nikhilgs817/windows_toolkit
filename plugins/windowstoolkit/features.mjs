@@ -8,6 +8,10 @@ const F = {
 	only: (what) => ({ key: "only", label: "Only these", type: "text", placeholder: "e.g. Headset|Speakers", hint: `Leave empty to cycle through every ${what}. Separate names with |.` }),
 	folder: (label = "Folder") => ({ key: "folder", label, type: "folder", placeholder: "%USERPROFILE%\\source\\my-project" }),
 };
+const profileField = (def) => ({
+	key: "profile", label: "Profile", type: "select", def,
+	options: ["Core", "Developer", "Podcast", "Gaming", "Trading"].map((name) => [name, name]),
+});
 
 export const GROUPS = [
 	["display", "Display & Windows"],
@@ -21,6 +25,7 @@ export const GROUPS = [
 export const FEATURES = [
 	// ---------------- Display & Windows
 	{ id: "dispset", group: "display", name: "Display Settings", glyph: "dispset", theme: "sky", label: "Display", tip: "Opens Windows Settings › Display." },
+	{ id: "rotate", group: "display", name: "Rotate Display", glyph: "rotate", theme: "ocean", label: "Rotate", tip: "Switches the chosen monitor between landscape and portrait. Other screens are not changed.", fields: [{ key: "direction", label: "Portrait", type: "select", def: "normal", options: [["normal", "Portrait (90°)"], ["flipped", "Portrait (flipped, 270°)"]] }] },
 	{ id: "nightlight", group: "display", name: "Night Light", glyph: "nightlight", theme: "sunset", tip: "Opens Settings › Night light, where you can switch it on or off." },
 	{ id: "hdr", group: "display", name: "HDR", glyph: "hdr", theme: "electric", tip: "Turns HDR on or off (Windows shortcut Win+Alt+B; Game Bar must be enabled)." },
 	{ id: "brightup", group: "display", name: "Brightness Up", glyph: "brightup", theme: "gold", label: "Bright +", tip: "Brighter laptop screen and DDC/CI monitors.", fields: [F.step()] },
@@ -107,6 +112,7 @@ export const FEATURES = [
 	{ id: "journal", group: "game", name: "Journal Note", glyph: "journal", theme: "violet", label: "Journal", tip: "Adds a timestamped line to your journal file (the note below, or the clipboard text).", fields: [{ key: "file", label: "Journal file", type: "file", def: "%USERPROFILE%\\Documents\\Trading Journal.txt" }, { key: "text", label: "Note", type: "text", placeholder: "Leave empty to use the clipboard text" }] },
 	{ id: "toscreen", group: "game", name: "Move to Screen", glyph: "toscreen", theme: "ocean", label: "To Screen 1", tip: "Moves the active app to a screen (numbered left to right).", fields: [{ key: "screen", label: "Screen", type: "select", def: "1", options: [["1", "Screen 1"], ["2", "Screen 2"], ["3", "Screen 3"], ["4", "Screen 4"]] }] },
 	// ---------------- Profiles (navigation)
-	{ id: "page", group: "nav", name: "Profile Page", glyph: "grid", theme: "slate", label: "More ›", tip: "Shows another page of a Windows Toolkit profile.", fields: [{ key: "profile", label: "Profile", type: "select", def: "Core", options: [["Core", "Core"], ["Developer", "Developer"], ["Podcast", "Podcast"], ["Gaming", "Gaming"], ["Trading", "Trading"]] }, { key: "page", label: "Page", type: "select", def: "2", options: [["1", "Page 1"], ["2", "Page 2"], ["3", "Page 3"]] }] },
-	{ id: "persona", group: "nav", name: "Open Profile", glyph: "appfolder", theme: "violet", label: "Developer", tip: "Opens one of the bundled Windows Toolkit profiles.", fields: [{ key: "profile", label: "Profile", type: "select", def: "Developer", options: [["Core", "Core"], ["Developer", "Developer"], ["Podcast", "Podcast"], ["Gaming", "Gaming"], ["Trading", "Trading"]] }] },
+	{ id: "nextpage", group: "nav", name: "Next Page", glyph: "nextpage", theme: "slate", label: "Next", tip: "Opens page 2 of the selected Windows Toolkit profile.", fields: [profileField("Core")] },
+	{ id: "page", group: "nav", name: "Profile Page", glyph: "grid", theme: "slate", label: "More ›", tip: "Shows another page of a Windows Toolkit profile.", fields: [profileField("Core"), { key: "page", label: "Page", type: "select", def: "2", options: [["1", "Page 1"], ["2", "Page 2"], ["3", "Page 3"]] }] },
+	{ id: "persona", group: "nav", name: "Open Profile", glyph: "appfolder", theme: "violet", label: "Developer", tip: "Opens one of the bundled Windows Toolkit profiles.", fields: [profileField("Developer")] },
 ];
