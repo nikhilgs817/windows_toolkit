@@ -27,7 +27,7 @@
 		const chosen = [settings.appName, settings.appId, settings.target].filter(Boolean).join(" ");
 		if (chosen) {
 			if (VSCODE_RE.test(chosen)) return "VS Code";
-			for (const [pattern, name] of [[/chatgpt|OpenAI\.(ChatGPT|Codex)/i, "ChatGPT"], [/\bclaude\b/i, "Claude"], [/thinkorswim/i, "thinkorswim"], [/Fidelity Trader\+|68D72461-B3DB-4FE2-AE47-50EF0FD7254F/i, "Fidelity Trader+"]]) if (pattern.test(chosen)) return name;
+			for (const [pattern, name] of [[/chatgpt|OpenAI\.(ChatGPT|Codex)/i, "ChatGPT"], [/\bclaude\b/i, "Claude"], [/thinkorswim/i, "thinkorswim"], [/tradingview/i, "TradingView"], [/Fidelity Trader\+|68D72461-B3DB-4FE2-AE47-50EF0FD7254F/i, "Fidelity Trader+"]]) if (pattern.test(chosen)) return name;
 		}
 		return "";
 	}
@@ -80,7 +80,7 @@
 			ws.send(JSON.stringify({ event: registerEvent, uuid: piUuid }));
 			if (APP_KINDS.includes(kind)) requestApps();
 			if (SCREEN_KINDS.includes(kind)) sendToPlugin({ event: "getScreens" });
-			if (LAUNCH_KINDS.includes(kind) || kind === "vsc-back" || window.WinToolkitCompanion) ws.send(JSON.stringify({ event: "getGlobalSettings", context: piUuid }));
+			ws.send(JSON.stringify({ event: "getGlobalSettings", context: piUuid }));
 		};
 		ws.onmessage = (e) => {
 			let m;
@@ -91,10 +91,13 @@
 			} else if (m.event === "didReceiveGlobalSettings" && m.payload) {
 				globalSettings = m.payload.settings || {};
 				$("monitorOrder").value = globalSettings.monitorOrder === "left" || globalSettings.monitorOrder === "primary" ? globalSettings.monitorOrder : "windows";
+				{ const el = $("companionMeterSaved"); if (el) { const at = globalSettings.claudeUsageKeySavedAt ? new Date(globalSettings.claudeUsageKeySavedAt) : null; el.textContent = globalSettings.claudeUsageKey ? "Session key saved" + (at && !isNaN(at) ? " on " + at.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }) : "") + ". If the key shows SIGN IN, press it to open claude.ai and paste a new one." : "No session key saved yet. Press the key to open claude.ai, then paste the sessionKey here."; } }
 				$("autoFollow").checked = globalSettings.autoFollow !== false;
 				$("companionFollow").checked = globalSettings.autoFollow !== false;
 				$("returnOnClose").checked = globalSettings.returnOnClose !== false;
+				$("followWindowsMotion").checked = globalSettings.followWindowsMotion !== false;
 				if (LAUNCH_KINDS.includes(kind)) requestMonitors();
+				fillLook();
 			} else if (m.event === "sendToPropertyInspector" && m.payload) {
 				onPluginMessage(m.payload);
 			}
@@ -248,6 +251,7 @@
 
 	function onPluginMessage(p) {
 		if (p.event === "credentials") { receiveCredentials(p); return; }
+		if (p.event === "meterStatus") { const el = $("companionMeterStatus"); if (el) el.textContent = p.message || ""; return; }
 		if (p.event === "autofillResult" && kind === "app") { credentialStatus(p.message || "Autofill finished.", !p.ok); return; }
 		if (p.event === "screens") {
 			screenList = Array.isArray(p.list) ? p.list : [];
@@ -308,14 +312,34 @@
 		const definition = companion?.commands?.find((c) => "comp-" + c.id === kind);
 		show("sec-companion", !!definition);
 		if (definition) {
+			const fixed = ["back", "focus", "url", "page", "applink"].includes(definition.operation);
 			$("companionTitle").textContent = companion.name;
 			$("companionDescription").textContent = definition.description;
-			$("companionShortcutRow").hidden = definition.id === "back" || definition.id === "focus";
-			$("companionShortcutHint").hidden = definition.id === "back" || definition.id === "focus";
-			$("companionShortcut").placeholder = definition.shortcut || "Use the built-in control";
+			$("companionSetup").hidden = !definition.setup;
+			$("companionSetup").textContent = definition.setup || "";
+			$("companionExecution").hidden = !definition.trading;
+			$("companionExecution").textContent = definition.executionNote || (definition.trading === "submit" ? (definition.holdMs ? "HOLD 1 SECOND · Release early to cancel. Uses the configured broker action once." : "IMMEDIATE ACTION · Uses the broker's configured hotkey and order defaults. Nothing is queued or repeated on hold.") : definition.trading === "bracket" ? "EDITABLE BRACKET · Opens setup only. Entry, target and stop are edited in the app." : "POSITIONS / TRADING PANEL");
+			$("companionShortcutRow").hidden = fixed;
+			$("companionShortcutHint").hidden = fixed;
+			$("companionDestinationRow").hidden = definition.operation !== "url";
+			$("companionDestination").placeholder = definition.url || "Enter your trading desk page URL";
+			$("companionDestination").addEventListener("change", () => { set("destination", $("companionDestination").value.trim()); save(); });
+			$("companionShortcut").placeholder = definition.trading === "submit" ? (definition.suggest ? "Type " + definition.suggest + " (app default)" : "Enter the matching broker hotkey") : definition.shortcut || "Use the built-in control";
+			if (definition.trading) $("companionShortcutHint").textContent = definition.trading === "submit" ? "Required: one configured trading hotkey, e.g. Ctrl+Alt+B or F8. Broker settings determine whether it submits. The trading app must already be in front." : "Optional app hotkey override. Bracket shortcuts must open an editor; panel shortcuts must open the named panel. One chord only.";
 			$("companionBack").hidden = definition.id !== "back";
 			$("companionFollowRow").hidden = definition.id !== "back";
 			$("companionFollow").addEventListener("change", () => { globalSettings.autoFollow = $("companionFollow").checked; if (ws && ws.readyState === 1) ws.send(JSON.stringify({event:"setGlobalSettings",context:piUuid,payload:globalSettings})); });
+			const meter = definition.meter;
+			$("companionMeterRow").hidden = !(meter && meter.source === "claude");
+			if (meter) { $("companionShortcutRow").hidden = true; $("companionShortcutHint").hidden = true; }
+			$("companionMeterSave").addEventListener("click", () => {
+				const v = $("companionMeterKey").value.trim();
+				$("companionMeterKey").value = "";
+				if (!v) { $("companionMeterStatus").textContent = "Paste the sessionKey value first."; return; }
+				$("companionMeterStatus").textContent = "Saving…";
+				sendToPlugin({ event: "meterSaveKey", value: v });
+			});
+			$("companionMeterClear").addEventListener("click", () => { $("companionMeterStatus").textContent = "Removing…"; sendToPlugin({ event: "meterClearKey" }); });
 			$("companionShow").addEventListener("click", () => sendToPlugin({event:"companionShow"}));
 			$("companionBack").addEventListener("click", () => sendToPlugin({event:"companionBack"}));
 			let shortcutTimer;
@@ -333,8 +357,28 @@
 		show("sec-shot", kind === "screenshot");
 		show("sec-desktop", kind === "showdesktop");
 		show("motionRow", true);
-		$("animate").addEventListener("change", () => { settings.animate = $("animate").checked; $("animSpeed").disabled = !settings.animate; save(); });
-		$("animSpeed").addEventListener("change", () => { settings.animSpeed = $("animSpeed").value; save(); renderLook(); });
+		$("motionStyle").addEventListener("change", () => {
+			const v = $("motionStyle").value;
+			if (v === "still") { settings.animate = false; delete settings.motionStyle; }
+			else { delete settings.animate; set("motionStyle", v === "loop" ? undefined : v); }
+			lookChanged();
+		});
+		$("animSpeed").addEventListener("change", () => { set("animSpeed", $("animSpeed").value); lookChanged(); });
+		$("labelCase").addEventListener("change", () => { set("labelCase", $("labelCase").value === "auto" ? undefined : $("labelCase").value); lookChanged(); });
+		$("glow").addEventListener("change", () => { set("glow", $("glow").value === "normal" ? undefined : $("glow").value); lookChanged(); });
+		$("pressFx").addEventListener("change", () => { set("pressFx", $("pressFx").checked ? undefined : false); lookChanged(); });
+		$("useColours").addEventListener("click", () => { settings.iconColours = [$("colour1").value, $("colour2").value]; set("iconImage"); save(); fill(); });
+		$("clearColours").addEventListener("click", () => { set("iconColours"); save(); fill(); });
+		$("lookToAll").addEventListener("click", () => {
+			const d = { at: Date.now() };
+			for (const k of LOOK_FIELDS) { const v = lookValue(k); if (v !== undefined && !(k === "iconStyle" && v === "real")) d[k] = v; }
+			globalSettings.lookDefaults = d;
+			settings.lookAt = d.at;
+			saveGlobalSettings();
+			save();
+			$("lookToAllHint").textContent = "Done. Every key of this plugin now uses this look. Change any key afterwards to give it its own.";
+		});
+		$("followWindowsMotion").addEventListener("change", () => { globalSettings.followWindowsMotion = $("followWindowsMotion").checked; saveGlobalSettings(); });
 		show("sec-screen", SCREEN_KINDS.includes(kind));
 		$("sleep").closest(".row").hidden = $("monitorOnOffHint").hidden = !MONITOR_KINDS.includes(kind);
 		show("sec-apps", kind === "appsfolder");
@@ -449,12 +493,15 @@
 		// Look
 		const realCapable = REAL_CAPABLE.includes(kind);
 		$("styleReal").hidden = !realCapable;
-		$("stylePro").hidden = kind.indexOf("vsc-") !== 0 && !window.WinToolkitCompanion;
-		$("styleReal").textContent = kind === "folder" || kind === "downloads" ? "Folder icon" : kind === "website" ? "Site icon" : "App icon";
+				$("styleReal").textContent = kind === "folder" || kind === "downloads" ? "Folder icon" : kind === "website" ? "Site icon" : "App icon";
+		show("styleApp", !!window.WinToolkitDesign);
+		show("styleLight", !!(window.WinToolkitDesign && window.WinToolkitDesign.light));
+		if (window.WinToolkitDesign && window.WinToolkitDesign.styleName) $("styleApp").textContent = window.WinToolkitDesign.styleName;
 		for (const b of document.querySelectorAll("#styleSeg button")) {
 			b.addEventListener("click", () => {
 				set("iconStyle", b.dataset.style);
 				set("iconImage");
+				settings.lookAt = Date.now();
 				save();
 				fill();
 			});
@@ -465,7 +512,7 @@
 			sendToPlugin({ event: "refreshIcon", settings });
 		});
 		$("resetLook").addEventListener("click", () => {
-			for (const k of ["iconStyle", "iconGlyph", "iconTheme", "iconLabel", "hideLabel", "iconImage", "animate", "animSpeed"]) delete settings[k];
+			for (const k of ["iconStyle", "iconGlyph", "iconTheme", "iconLabel", "hideLabel", "iconImage", "iconColours", "lookAt"].concat(LOOK_FIELDS)) delete settings[k];
 			save();
 			fill();
 		});
@@ -488,6 +535,7 @@
 			b.style.background = "linear-gradient(135deg," + c[0] + "," + c[1] + ")";
 			b.addEventListener("click", () => {
 				set("iconTheme", name);
+				set("iconColours");
 				set("iconImage");
 				save();
 				fill();
@@ -504,7 +552,7 @@
 			b.dataset.glyph = g;
 			b.addEventListener("click", () => {
 				set("iconGlyph", g);
-				if (currentStyle() === "real") set("iconStyle", "neon");
+				if (currentStyle() === "real") { set("iconStyle", defaultStyle()); settings.lookAt = Date.now(); }
 				set("iconImage");
 				save();
 				fill();
@@ -593,6 +641,7 @@
 		setVal("shortcut", s.shortcut);
 		setVal("companionShortcut", s.shortcut);
 		setVal("command", s.command);
+		setVal("companionDestination", s.destination);
 		if (kind === "app") {
 			if (!credentialDirty) setVal("credentialUsername", s.credentialUsername);
 			$("credentialPassword").placeholder = s.credentialPassword ? "••••••••" : "Enter a password";
@@ -631,9 +680,7 @@
 		$("sec-handoff").hidden = !handoffName();
 		if (handoffName()) $("handoffName").textContent = handoffName();
 		$("removeImage").hidden = !s.iconImage;
-		$("animate").checked = s.animate !== false;
-		$("animSpeed").value = SPEEDS[s.animSpeed] ? s.animSpeed : "calm";
-		$("animSpeed").disabled = s.animate === false;
+		fillLook();
 		$("iconLabel").placeholder = defaultLabel();
 		renderLook();
 	}
@@ -681,6 +728,8 @@
 
 	function dynamicLabel() {
 		const s = settings;
+		const definition = window.WinToolkitCompanion?.commands?.find(c => "comp-" + c.id === kind);
+		if (definition && (((definition.trading === "submit" || definition.requiresBinding) && !s.shortcut?.trim()) || (definition.operation === "url" && !definition.url && !s.destination?.trim()))) return definition.name + " · SETUP";
 		if (APP_KINDS.includes(kind)) {
 			if (s.appName) return s.appName;
 			if (kind === "app" && s.target) return s.target.trim().split(/[\\/]/).pop().replace(/\.(exe|lnk|bat|cmd)$/i, "");
@@ -704,10 +753,53 @@
 		return dynamicLabel() || (p ? p.label : "");
 	}
 
+	/* ------------------------------------------------------------ look settings (mirrors lookValue in base.ts) */
+
+	const LOOK_FIELDS = ["iconStyle", "animate", "animSpeed", "motionStyle", "glow", "labelCase", "pressFx"];
+	const STYLES = ["real", "glass", "neon", "vivid", "mono", "pro", "app", "light"];
+	/** Windows Toolkit keys default to Vivid; the app companion plugins default to Glass. */
+	function defaultStyle() { return window.WinToolkitCompanion || kind.indexOf("vsc-") === 0 ? "glass" : "vivid"; }
+	function lookValue(k) {
+		const d = globalSettings.lookDefaults || {};
+		const own = !d.at || (settings.lookAt || 0) >= d.at;
+		return own && settings[k] !== undefined ? settings[k] : d[k];
+	}
+	function lookChanged() { settings.lookAt = Date.now(); save(); fillLook(); }
+	function saveGlobalSettings() { if (ws && ws.readyState === 1) ws.send(JSON.stringify({ event: "setGlobalSettings", context: piUuid, payload: globalSettings })); }
+	function styleOk(st) {
+		if (!STYLES.includes(st)) return false;
+		if (st === "real") return REAL_CAPABLE.includes(kind);
+		if (st === "app") return !!window.WinToolkitDesign;
+		if (st === "light") return !!(window.WinToolkitDesign && window.WinToolkitDesign.light);
+		return true;
+	}
+	function fillLook() {
+		if (!$("motionStyle")) return;
+		$("motionStyle").value = lookValue("animate") === false ? "still" : ["glow", "icon"].includes(lookValue("motionStyle")) ? lookValue("motionStyle") : "loop";
+		$("animSpeed").value = SPEEDS[lookValue("animSpeed")] ? lookValue("animSpeed") : "calm";
+		$("animSpeed").disabled = lookValue("animate") === false;
+		$("labelCase").value = ["title", "upper"].includes(lookValue("labelCase")) ? lookValue("labelCase") : "auto";
+		$("glow").value = ["subtle", "bold"].includes(lookValue("glow")) ? lookValue("glow") : "normal";
+		$("pressFx").checked = lookValue("pressFx") !== false;
+		const c = customColours();
+		$("clearColours").hidden = !c;
+		if (c) { $("colour1").value = c[0]; $("colour2").value = c[1]; }
+		renderLook();
+	}
+	function customColours() {
+		const c = settings.iconColours, hex = (v) => typeof v === "string" && /^#[0-9a-f]{6}$/i.test(v);
+		return Array.isArray(c) && hex(c[0]) && hex(c[1]) ? c.slice(0, 2) : undefined;
+	}
+
 	function currentStyle() {
-		const st = settings.iconStyle;
-		if (st === "real" || st === "neon" || st === "vivid" || st === "pro") return st === "real" && !REAL_CAPABLE.includes(kind) ? "neon" : st;
-		return I().PRESET_ICONS[kind]?.style || (["app", "website"].includes(kind) ? "real" : kind.indexOf("vsc-") === 0 ? "pro" : "neon");
+		const own = settings.iconStyle, plugin = lookValue("iconStyle");
+		const d = globalSettings.lookDefaults;
+		const ownWins = !d || (settings.lookAt || 0) >= (d.at || 0) || own === plugin;
+		if (styleOk(own) && ownWins) return own;
+		if (REAL_CAPABLE.includes(kind) && ["app", "website"].includes(kind)) return "real";
+		if (styleOk(plugin)) return plugin;
+		const preset = I().PRESET_ICONS[kind]?.style;
+		return styleOk(preset) && preset !== "app" ? preset : defaultStyle();
 	}
 
 	function currentLook() {
@@ -719,6 +811,10 @@
 			theme: s.iconTheme || p.theme,
 			label: s.hideLabel ? "" : (s.iconLabel && s.iconLabel.trim()) || defaultLabel(),
 			style: currentStyle(),
+			colours: customColours(),
+			motionStyle: lookValue("motionStyle"),
+			labelCase: lookValue("labelCase"),
+			glow: lookValue("glow"),
 		};
 	}
 
@@ -730,11 +826,15 @@
 		const hint = $("styleHint");
 		hint.className = "hint";
 		hint.textContent = "";
+		const brandOnly = look.style === "app" && !!window.WinToolkitDesign;
+		if (brandOnly) hint.textContent = "Uses " + window.WinToolkitDesign.name + " colours. Pick Glass, Vivid, Neon, Mono or Pro to choose your own colour.";
+		$("themes").hidden = $("customColourRow").hidden = brandOnly;
+		$("themes").previousElementSibling.hidden = brandOnly;
 		$("refreshIcon").hidden = usingImage || look.style !== "real";
-		if (settings.animate !== false && !motionTimer) motionTimer = setInterval(() => {
+		if (lookValue("animate") !== false && !motionTimer) motionTimer = setInterval(() => {
 			if (!document.hidden) drawPreview();
 		}, 1000 / 12);
-		if (settings.animate === false && motionTimer) { clearInterval(motionTimer); motionTimer = null; }
+		if (lookValue("animate") === false && motionTimer) { clearInterval(motionTimer); motionTimer = null; }
 
 		if (MONITOR_KINDS.includes(kind)) {
 			drawPreview();
@@ -750,7 +850,7 @@
 				drawPreview();
 				if (!realIcon.real) hint.textContent = "No icon found for this app, so it shows the colourful artwork instead.";
 			} else {
-				prev.innerHTML = lib.keySvg(Object.assign({}, look, { style: "neon" }));
+				prev.innerHTML = lib.keySvg(Object.assign({}, look, { style: defaultStyle() }));
 				hint.textContent = "Fetching the icon…";
 				clearTimeout(iconTimer);
 				iconTimer = setTimeout(() => sendToPlugin({ event: "getIcon", settings }), 250);
@@ -760,22 +860,22 @@
 		}
 
 		for (const b of document.querySelectorAll("#styleSeg button")) b.classList.toggle("on", !usingImage && b.dataset.style === look.style);
-		const gridStyle = look.style === "vivid" ? "vivid" : "neon";
+		const gridStyle = ["glass", "neon", "vivid", "mono", "pro"].includes(look.style) ? look.style : defaultStyle();
 		for (const b of document.querySelectorAll(".swatch")) b.classList.toggle("on", !usingImage && b.dataset.theme === look.theme);
 		for (const b of document.querySelectorAll(".glyph")) {
 			b.classList.toggle("on", !usingImage && look.style !== "real" && b.dataset.glyph === look.glyph);
-			const key = look.theme + "/" + gridStyle + "/" + b.dataset.glyph;
+			const key = look.theme + "/" + gridStyle + "/" + (look.colours || []).join() + "/" + b.dataset.glyph;
 			if (b.dataset.rendered !== key) {
-				b.innerHTML = lib.keySvg({ glyph: b.dataset.glyph, theme: look.theme, label: "", style: gridStyle });
+				b.innerHTML = lib.keySvg({ glyph: b.dataset.glyph, theme: look.theme, label: "", style: gridStyle, colours: look.colours });
 				b.dataset.rendered = key;
 			}
 		}
 	}
 
 	const SPEEDS = { slow: 0.5, calm: 0.75, normal: 1, fast: 1.5 };
-	function loopMs() { return Math.round(12000 / (SPEEDS[settings.animSpeed] || SPEEDS.calm)); }
+	function loopMs() { return Math.round(12000 / (SPEEDS[lookValue("animSpeed")] || SPEEDS.calm)); }
 	function animatedLook(look) {
-		return settings.animate !== false
+		return lookValue("animate") !== false
 			? Object.assign({}, look, { motion: { kind, phase: (Date.now() % loopMs()) / loopMs() } }) : look;
 	}
 
@@ -790,7 +890,7 @@
 			preview.innerHTML = motion ? lib.pictureKeySvg(settings.iconImage, motion) : '<img src="' + settings.iconImage.replace(/"/g, "&quot;") + '">';
 		} else if (look.style === "real") {
 			if (realIcon.token === JSON.stringify(settings) && realIcon.real && realIcon.sourceImage) preview.innerHTML = lib.keySvg(Object.assign({}, animatedLook(look), { image: realIcon.sourceImage }));
-			else preview.innerHTML = lib.keySvg(animatedLook(Object.assign({}, look, { style: "neon" })));
+			else preview.innerHTML = lib.keySvg(animatedLook(Object.assign({}, look, { style: defaultStyle() })));
 		} else preview.innerHTML = lib.keySvg(animatedLook(look));
 	}
 

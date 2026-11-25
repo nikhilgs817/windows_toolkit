@@ -261,6 +261,16 @@
 	<section id="sec-companion" hidden>
 		<h2 id="companionTitle">App control</h2>
 		<div id="companionDescription" class="hint pad"></div>
+		<div id="companionExecution" class="hint pad" hidden></div>
+		<div id="companionSetup" class="hint pad" hidden></div>
+		<div class="row" id="companionDestinationRow" hidden><label for="companionDestination">Page URL</label><input id="companionDestination" class="grow" placeholder="https://" /></div>
+		<div id="companionMeterRow" hidden>
+			<div class="row"><label for="companionMeterKey">Session key</label><input id="companionMeterKey" class="grow" type="password" autocomplete="off" placeholder="sk-ant-sid…" /></div>
+			<div class="row"><label></label><button id="companionMeterSave" type="button">Save key</button><button id="companionMeterClear" type="button">Remove key</button></div>
+			<div id="companionMeterHint" class="hint pad">Sign in at claude.ai in Chrome or Edge, press F12, open <b>Application › Cookies › https://claude.ai</b>, copy the <b>sessionKey</b> value (starts with sk-ant-sid), paste it here and click Save key. It is encrypted for this Windows account, shared by both Claude usage keys, and only sent to claude.ai.</div>
+			<div id="companionMeterSaved" class="hint pad"></div>
+			<div id="companionMeterStatus" class="hint pad"></div>
+		</div>
 		<div class="row" id="companionShortcutRow"><label for="companionShortcut">Shortcut</label><input id="companionShortcut" class="grow" placeholder="Use the built-in control" /></div>
 		<div id="companionShortcutHint" class="hint pad">Optional override, for example Ctrl+Shift+N. Match the shortcut configured in your app.</div>
 		<div class="row" id="companionFollowRow" hidden><label for="companionFollow">Follow focus</label><div class="grow"><input id="companionFollow" type="checkbox" checked /> <span class="hint">Automatically show these keys when this app is in front. Requires Windows Toolkit 2.6 or later.</span></div></div>
@@ -325,9 +335,13 @@
 					<div class="grow">
 						<div class="seg" id="styleSeg">
 							<button data-style="real" id="styleReal">App icon</button>
-							<button data-style="pro" id="stylePro">Pro</button>
-							<button data-style="neon">Colourful</button>
+							<button data-style="app" id="styleApp" hidden>App theme</button>
+							<button data-style="light" id="styleLight" hidden>Light</button>
+							<button data-style="glass">Glass</button>
 							<button data-style="vivid">Vivid</button>
+							<button data-style="neon">Neon</button>
+							<button data-style="mono">Mono</button>
+							<button data-style="pro" id="stylePro">Pro</button>
 						</div>
 						<div class="hint" id="styleHint"></div>
 					</div>
@@ -335,7 +349,8 @@
 				<div class="row tight">
 					<label for="iconLabel">Label</label>
 					<div class="grow inline">
-						<input id="iconLabel" maxlength="14" placeholder="" />
+						<input id="iconLabel" maxlength="18" placeholder="" />
+						<select id="labelCase" aria-label="Label letters"><option value="auto">Auto case</option><option value="title">Title Case</option><option value="upper">UPPER CASE</option></select>
 						<label class="check"><input type="checkbox" id="hideLabel" /> Hide</label>
 					</div>
 				</div>
@@ -348,15 +363,42 @@
 					</div>
 				</div>
 				<div class="row tight" id="motionRow" hidden>
-					<label for="animate">Animation</label>
-					<div class="grow inline"><label class="check"><input type="checkbox" id="animate" checked /> Gentle loop</label>
-						<select id="animSpeed" aria-label="Animation speed"><option value="slow">Slow</option><option value="calm">Calm</option><option value="normal">Normal</option><option value="fast">Fast</option></select></div>
+					<label for="motionStyle">Animation</label>
+					<div class="grow inline">
+						<select id="motionStyle" aria-label="What moves"><option value="loop">Full</option><option value="glow">Glow only</option><option value="icon">Icon only</option><option value="still">Still</option></select>
+						<select id="animSpeed" aria-label="Animation speed"><option value="slow">Slow</option><option value="calm">Calm</option><option value="normal">Normal</option><option value="fast">Fast</option></select>
+						<input type="checkbox" id="animate" hidden />
+					</div>
+				</div>
+				<div class="row tight" id="glowRow">
+					<label for="glow">Glow</label>
+					<div class="grow inline">
+						<select id="glow"><option value="subtle">Subtle</option><option value="normal">Normal</option><option value="bold">Bold</option></select>
+						<label class="check"><input type="checkbox" id="pressFx" checked /> Ripple when pressed</label>
+					</div>
+				</div>
+				<div class="row tight" id="allKeysRow">
+					<label></label>
+					<div class="grow">
+						<button id="lookToAll" type="button">Use this look on all keys</button>
+						<label class="check"><input type="checkbox" id="followWindowsMotion" checked /> Keep keys still when Windows animations are off</label>
+						<div class="hint" id="lookToAllHint">Copies the style, animation, glow, label case and ripple to every key of this plugin. Colours, icons and labels stay as they are. App icon keys keep their app's icon.</div>
+					</div>
 				</div>
 			</div>
 		</div>
 		<div id="artPickers">
 			<div class="sub">Colour</div>
 			<div id="themes" class="themes"></div>
+			<div class="row tight" id="customColourRow">
+				<label>Custom</label>
+				<div class="grow inline">
+					<input type="color" id="colour1" value="#C9A46A" aria-label="Main colour" />
+					<input type="color" id="colour2" value="#5B3A16" aria-label="Second colour" />
+					<button id="useColours" type="button">Use these colours</button>
+					<button id="clearColours" type="button" class="link" hidden>Back to theme</button>
+				</div>
+			</div>
 			<div class="sub">Icon</div>
 			<div id="glyphs" class="glyphs"></div>
 		</div>

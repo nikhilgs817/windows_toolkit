@@ -10,7 +10,7 @@ import { FEATURES, GROUPS } from "./features.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const sd = join(here, "com.windowstoolkit.core.sdPlugin");
-const VERSION = "3.0.2.0";
+const VERSION = "3.1.0.0";
 const PRODUCT_NAME = "Windows Toolkit";
 
 /** id → [Name in action list, tooltip] — order = order in the Stream Deck action list. */
@@ -41,7 +41,7 @@ export const ACTION_GROUPS = [
 	["Audio & Media", ["volup", "voldown", "mute", "micmute", "ptt", "miclevel", "output", "input", "appvol", "mixer", "soundboard", "prev", "playpause", "next"]],
 	["Clipboard & Text", ["copy", "paste", "cliphist", "cliptools", "textcase", "snippet", "shortcut", "emoji", "guid", "timestamp"]],
 	["System Monitor", ["cpu", "ram", "gpu", "disk", "diskfree", "netdown", "netup", "ping", "wifi", "battery", "uptime", "topapp", "procs", "taskmgr", "resmon"]],
-	["Power & Connectivity", ["lockpc", "sleep", "restart", "shutdown", "signout", "hibernate", "powerplan", "wifiradio", "bluetooth", "airplane", "dnd", "closeapp", "forceclose", "service", "emptybin", "portcheck"]],
+	["Power & Connectivity", ["lockpc", "sleep", "restart", "shutdown", "signout", "hibernate", "powerplan", "wifiradio", "bluetooth", "airplane", "dnd", "closeapp", "forceclose", "service", "emptybin", "portcheck", "healthcheck"]],
 	["Timers & Clocks", ["timer", "stopwatch", "pomodoro", "clock", "worldclock"]],
 	["Gaming", ["gamebar", "gamemode", "clip30", "record", "gameshot", "perf"]],
 	["Trading", ["market", "bell", "journal"]],

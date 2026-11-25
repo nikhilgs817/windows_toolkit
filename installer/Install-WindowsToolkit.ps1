@@ -11,8 +11,8 @@ $ErrorActionPreference = 'Stop'
 $script:PluginId = 'com.windowstoolkit.core'
 # Older names of this plugin. They are backed up and removed so Stream Deck does not show two copies.
 $script:RetiredPluginIds = @('com.dailyops.v2')
-$script:ReleaseVersion = '3.0.2.0'
-$script:ReleaseBase = 'https://github.com/nikhilgs817/windows_toolkit/releases/download/v3.0.2'
+$script:ReleaseVersion = '3.1.0.0'
+$script:ReleaseBase = 'https://github.com/nikhilgs817/windows_toolkit/releases/download/v3.1.0'
 $script:LogFile = $null
 
 function Write-Step([string]$Message) {

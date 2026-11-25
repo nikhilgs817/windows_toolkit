@@ -25,13 +25,13 @@ for (const name of names) {
 				const [c, r] = pos.split(",").map(Number), id = a.UUID.split(".").pop(), s = a.Settings || {};
 				const look = PRESET_ICONS[id] || PRESET_ICONS.app;
 				let label = s.iconLabel || (id === "persona" ? s.profile : id === "toscreen" ? `To Screen ${s.screen || 1}` : id === "worldclock" ? s.city : undefined) || look.label;
-				const svg = id === "monitorcontrol" ? monitorKeySvg({ n: 1, state: "on", caption: "Monitor 1", motion: { kind: id, phase } }) : keySvg({ glyph: look.glyph, theme: s.iconTheme || look.theme, label, style: look.style || "neon", motion: { kind: id, phase }, data: SAMPLE[id] || {} });
+				const svg = id === "monitorcontrol" ? monitorKeySvg({ n: 1, state: "on", caption: "Monitor 1", motion: { kind: id, phase } }) : keySvg({ glyph: look.glyph, theme: s.iconTheme || look.theme, label, style: look.style || "vivid", motion: { kind: id, phase }, data: SAMPLE[id] || {} });
 				body += `<g transform="translate(${28 + c * 150} ${60 + r * 150}) scale(${134 / 144})">${svg}</g>`;
 			}
 			return new Resvg(`<svg xmlns="http://www.w3.org/2000/svg" width="790" height="520">${body}</svg>`, { font: { loadSystemFonts: true } }).render().asPng();
 		};
 		const file = `profile-${name.toLowerCase()}-${i + 1}.png`;
-		writeFileSync(join("docs/images", file), render(0.3));
+		writeFileSync(join("docs/images", file), render(0.18));
 		sheets.push(file);
 		if (process.argv.includes("--frames")) for (let k = 0; k < 96; k++) writeFileSync(join("test-output/profiles", `${name}-${i + 1}-${String(k).padStart(3, "0")}.png`), render(k / 96));
 	});

@@ -460,7 +460,7 @@ export function fitLabel(label, { max = 18, size = 18, min = 10.5, width = 128, 
 export function pressOverlay(p, colour, rx = 14) {
 	if (!(p > 0 && p < 1)) return "";
 	const e = 1 - Math.pow(1 - p, 3), fade = 1 - p;
-	return `<rect width="144" height="144" rx="${rx}" fill="#fff" opacity="${(0.16 * fade).toFixed(3)}"/>` +
+	return `<rect data-press="1" width="144" height="144" rx="${rx}" fill="#fff" opacity="${(0.16 * fade).toFixed(3)}"/>` +
 		`<circle cx="72" cy="60" r="${(18 + e * 70).toFixed(2)}" fill="none" stroke="${colour}" stroke-width="${(6 * fade + 1).toFixed(2)}" opacity="${(0.75 * fade).toFixed(3)}"/>`;
 }
 
@@ -590,7 +590,7 @@ export function keySvg({ glyph, theme, label = "", style = "neon", image, motion
 		}
 	}
 	body += pressOverlay(press, dark ? c1 : "#ffffff", quiet ? 22 : 14);
-	return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="144" height="144" viewBox="0 0 144 144"><defs>${defs}</defs>${body}</svg>`;
+	return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="144" height="144" viewBox="0 0 144 144" data-style="${style}"><defs>${defs}</defs>${body}</svg>`;
 }
 
 /** Colours of the monitor on/off key: red = the press turns it off, green = the press turns it on. */
@@ -669,7 +669,7 @@ export function svgDataUri(svg) {
 /** @type {string[]} */
 export const REAL_ICON_KINDS = ["app", "website"];
 
-/** @type {Record<string, {glyph: string, theme: string, label: string, style?: "neon"|"vivid"|"real"|"pro"}>} */
+/** @type {Record<string, {glyph: string, theme: string, label: string, style?: "real"|"glass"|"neon"|"vivid"|"mono"|"pro"|"app"|"light"}>} */
 export const PRESET_ICONS = {
 	downloads: { glyph: "folder", theme: "gold", label: "Folders" },
 	folder: { glyph: "folder", theme: "fuchsia", label: "Folder" },

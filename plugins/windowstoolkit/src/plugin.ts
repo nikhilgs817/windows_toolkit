@@ -1,7 +1,7 @@
 import streamDeck from "@elgato/streamdeck";
 import { mkdirSync, writeFileSync } from "node:fs";
 import type { JsonObject, JsonValue } from "@elgato/utils";
-import { REGISTRY, globals } from "../../../shared/base.js";
+import { REGISTRY, globals, repaintEverything, setGlobals, watchWindowsMotion } from "../../../shared/base.js";
 import { ps } from "../../../shared/ps.js";
 import { credentialBinding } from "../../../shared/credentials.js";
 import { ALL_ACTIONS } from "./actions.js";
@@ -103,7 +103,8 @@ streamDeck.ui.onSendToPlugin<{ event?: string; settings?: JsonObject; password?:
 ps.start();
 void ps.run("warm", [], 60_000).then((r) => log.info(`warm-up: ${r.status} ${r.message}`));
 
-streamDeck.settings.onDidReceiveGlobalSettings((ev) => Object.assign(globals, ev.settings));
+streamDeck.settings.onDidReceiveGlobalSettings((ev) => { setGlobals(ev.settings); void repaintEverything(); });
+watchWindowsMotion();
 
 await streamDeck.connect();
 initCompanions();

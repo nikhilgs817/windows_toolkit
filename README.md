@@ -2,9 +2,19 @@
 
 ![Windows Toolkit logo: blue toolbox with a white Windows mark, wrench and gear](docs/images/windows-toolkit-logo.png)
 
-The animated Stream Deck plugin for Windows **developers, podcasters, gamers and traders**. Version **3.0.0.0** has 97 actions, from display, audio, live system stats, power, timers and developer tools to Game Bar and a market clock, plus app, folder and website launchers. It ships ready-made profiles for each kind of user and a double-click installer.
+The animated Stream Deck plugin for Windows **developers, podcasters, gamers and traders**. Version **3.1** has 100 actions, from display, audio, live system stats, power, timers and developer tools to Game Bar and a market clock, plus app, folder and website launchers. It ships ready-made profiles for each kind of user and a double-click installer.
 
 Everything uses Windows' own features. There are no accounts, cloud services or third-party apps.
+
+**Highlights**
+
+- **Five designer looks** on every key (Vivid, Glass, Neon, Mono and Pro), plus the real app, site or folder icon, 40+ colour themes, your own two colours, label or picture.
+- **Calm, classy motion**: a 12-second loop at 12 frames a second, four speeds, three motion styles, a press ripple, and keys that go still when Windows animations are off.
+- **One click to restyle the whole deck** with "Use this look on all keys".
+- **Three-monitor launching**: tap, double-tap or hold a launcher to open the app on screen 1, 2 or 3.
+- **Live system keys**, safe 1-second holds for risky actions, and an installer that backs up your setup and rolls back if anything fails.
+
+![The five looks: Vivid, Glass, Neon, Mono and Pro](docs/images/looks.png)
 
 ![Developer profile](docs/images/profile-developer-1.png)
 
@@ -22,7 +32,21 @@ Pick one from Stream Deck's profile list, or press its key on page 2 of **Window
 
 ![Trading profile](docs/images/profile-trading-1.png)
 
-## New in 3.0
+## New in 3.1: Design System 4
+
+| What | Details |
+|---|---|
+| **Two new looks** | **Glass** (frosted, quiet, Title Case labels) and **Mono** (monochrome with a single colour dot). Vivid stays the default; Neon (formerly Colourful) and Pro are still here. |
+| **Custom colours** | Pick any two colours for a key instead of a theme. |
+| **Motion styles** | Full, Glow only, Icon only or Still, at Slow, Calm, Normal or Fast. |
+| **Glow and ripple** | Subtle, Normal or Bold glow, and a short ripple when you press a key (can be turned off per key). |
+| **Labels** | Up to 18 letters, fitted to the key, in Auto, Title Case or UPPER CASE. |
+| **Whole deck at once** | "Use this look on all keys" copies a key's style, motion, glow, label case and ripple to every key, including keys on pages you can't see. Change any key afterwards to give it its own look. |
+| **Respects Windows** | Keys stop moving when Windows Settings › Accessibility › Visual effects › Animation effects is off (you can opt out). |
+| **Site Health key** | New developer key: checks any http(s) address every 30 seconds and shows its status code and response time, or DOWN. Press to open it. |
+| **Companion plugins** | VS Code, ChatGPT, Claude, TradingView, thinkorswim and Fidelity Trader+ share the same design system and settings panel, with Glass as their default. |
+
+## Since 3.0
 
 | Group | Keys |
 |---|---|
@@ -30,16 +54,16 @@ Pick one from Stream Deck's profile list, or press its key on page 2 of **Window
 | **Audio** | Mute (shows state), Mic Mute (red On Air while live), Push to Talk, live Mic Level, Switch Output, Switch Input, App Volume (one app), Volume Mixer, Soundboard, Previous / Play-Pause / Next |
 | **System Monitor** (live, every second) | CPU, Memory, GPU, Disk Activity, Disk Free, Download, Upload, Ping, Wi-Fi Signal, Battery, Uptime, Top App, Processes, Task Manager, Resource Monitor. Rings turn amber above 60% and red above 85% |
 | **Power & Control** | Sleep, Restart, Shut Down, Sign Out, Hibernate, Force Close, Restart Service and Empty Recycle Bin need a **1-second hold**: a red ring fills, and a tap only warns. Also Power Plan (shows the plan), Close App, Wi-Fi / Bluetooth / Airplane on-off (shows state), Do Not Disturb (opens its toggle) |
-| **Productivity & Developer** | Timer, Stopwatch, Pomodoro (tap start/pause, hold reset), Clock, World Clock, Run Command (✓/✕ by exit code), Terminal Here, Text Snippet, Keyboard Shortcut (Win combos too), Workspace (open several items), Port Check (localhost server up/down), New GUID, Timestamp, Clipboard Tools (JSON, Base64, URL, trim), Text Case |
+| **Productivity & Developer** | Timer, Stopwatch, Pomodoro (tap start/pause, hold reset), Clock, World Clock, Run Command (✓/✕ by exit code), Terminal Here, Text Snippet, Keyboard Shortcut (Win combos too), Workspace (open several items), Port Check (localhost server up/down), Site Health (any web address: status code and response time), New GUID, Timestamp, Clipboard Tools (JSON, Base64, URL, trim), Text Case |
 | **Gaming & Trading** | Game Bar, Game Mode (shows state), Clip Last 30s, Record (timer while recording), Game Screenshot, Performance overlay, Market Clock (Pre-market / Open / After-hours countdown; editable hours and time zone), Market Bell, Journal Note, Move to Screen 1–4 |
 
-Select a key in Stream Deck to change its settings. Every key keeps the Toolkit design: Colourful, Vivid and Pro looks, 29 colour themes, your own label, icon or picture, and its own animation on a 12-second loop.
+Select a key in Stream Deck to change its settings. Every key keeps the Toolkit design: five looks, 40+ colour themes or your own colours, your own label, icon or picture, and its own animation on a 12-second loop.
 
 Not possible with Windows' own features, so left out: live FPS, stock prices, and OBS/Spotify/Discord control. Windows has no supported switch for Night Light or Do Not Disturb, so those keys open the Windows toggle instead.
 
 ## Install
 
-1. Download **WindowsToolkit-Installer-3.0.0.0.zip** from [the latest release](https://github.com/nikhilgs817/windows_toolkit/releases/latest).
+1. Download **WindowsToolkit-Installer-3.1.0.0.zip** from [the latest release](https://github.com/nikhilgs817/windows_toolkit/releases/latest).
 2. Right-click the ZIP → **Extract All**, then open its **WindowsToolkit-Installer** folder.
 3. Double-click **Install-WindowsToolkit.cmd** and wait for the success message. Stream Deck restarts automatically.
 
@@ -57,7 +81,7 @@ The bundled editable **Apps** and **Websites** profiles each start with Back and
 
 - **Open App**: select an installed app or enter an advanced launch target and arguments. The selected app supplies the default icon and label.
 - **Folders**: open any folder using its full path. In File Explorer, click the address bar or press Alt+D, copy the path and paste it into the key's settings. Environment variables such as `%USERPROFILE%\Documents` work too. Enable **Use the folder name** for an automatic label; a custom Label in Look overrides it. Includes real folder icons, all looks, animation and monitor gestures. The former Open Folder entry is hidden, with its action ID still supported for old layouts.
-- **Open Website**: enter a URL and choose a browser. Under Look, choose Site icon, Colourful or Vivid, a colour theme, custom label or artwork, and Gentle loop animation. Use the Windows Toolkit action to get these controls; Stream Deck's built-in Website action has different settings.
+- **Open Website**: enter a URL and choose a browser. Under Look, choose Site icon or any of the five looks, a colour theme, custom label or artwork, and the animation. Use the Windows Toolkit action to get these controls; Stream Deck's built-in Website action has different settings.
 - **Website Folder**: open the plugin's editable Websites collection, with the animated ocean folder/globe icon. Use **Open Websites** in its settings to configure the page in Stream Deck. Add Open Website keys and their URLs; keep Back to return to your main keys. The collection pauses companion focus switching while open.
 - **Apps** and **Back to Main Keys**: open your editable Apps profile and return to the previous keys.
 - **Screenshot**: tap to select an area, double-tap for the active window, or hold for all screens. Configure the hold time, file saving and clipboard behavior in settings. Area capture uses Windows Snipping Tool.
@@ -95,11 +119,20 @@ Compatibility depends on the app exposing native login controls through Windows 
 
 ## Appearance
 
-Choose **Colourful**, **Vivid**, **Pro**, or the real app/site/folder icon where available. Customize the theme, glyph and label, hide the label, or upload your own picture. There are 29 colour themes, including Sunset, Tropical, Electric, Cosmic, Peach and Lemonade.
+Select a key and open **Look**:
 
-Every key has an animation speed setting (Slow, Calm, Normal or Fast; Calm is the default). Every plugin action supports a matching six-second animation at 12 frames per second, including Colourful, Vivid, Pro and real-icon looks. Folders open gently, app tiles move, volume waves pulse and documents shift on Copy/Paste. Real app/site icons float subtly; custom pictures keep their composition with a moving edge. Labels stay still. Monitor Control keeps its red/green state colours and uses animated edging.
+| Setting | Choices |
+|---|---|
+| **Style** | Vivid (default), Glass, Neon, Mono, Pro, or the real App / Site / Folder icon where there is one |
+| **Label** | Your own text (up to 18 letters, fitted to the key), Auto / Title Case / UPPER CASE, or hidden |
+| **Picture** | Upload your own picture; it keeps its composition inside an animated frame |
+| **Animation** | Full, Glow only, Icon only or Still, at Slow, Calm (default), Normal or Fast |
+| **Glow** | Subtle, Normal or Bold, and a ripple when pressed |
+| **Colour** | 29 themes, including Sunset, Tropical, Electric, Cosmic, Peach and Lemonade, or any two colours of your own |
 
-Turn **Look → Animation → Gentle loop** off on any key for a still image. A shared clock draws only visible keys, skips busy renders and stops when no animated keys are visible. The optional editor companion supports the same looks and motion.
+**Use this look on all keys** copies the style, animation, glow, label case and ripple to every key of the plugin. Colours, icons and labels stay as they are, and app, site and folder keys keep their real icons. Change any key afterwards to give it its own look. **Reset look** returns a key to the defaults.
+
+Every action has its own motion: folders open gently, app tiles move, volume waves pulse and documents shift on Copy and Paste. Real icons float subtly; labels stay still. Monitor Control keeps its red and green state colours. A shared 12 fps clock draws only visible keys, skips busy renders and stops when nothing is animated. Keys stay still while Windows **Animation effects** is off, unless you untick **Keep keys still when Windows animations are off**.
 
 Existing native Stream Deck shortcuts can use exported animated GIF artwork. These pictures are part of a personal profile, separate from the plugin installer; they do not change the shortcut's app, website or navigation target. Replace their picture with a still image to stop that GIF.
 
@@ -142,7 +175,7 @@ npm run build:installer
 npm run test:installer
 ```
 
-The build writes `plugins/windowstoolkit/com.windowstoolkit.core.sdPlugin/`; packaging writes `dist/com.windowstoolkit.core.streamDeckPlugin`. `build:installer` bundles that package, its checksum manifest, the PowerShell installer, CMD launcher and instructions into `dist/WindowsToolkit-Installer-3.0.0.0.zip`. Run `pack` before building the installer. The installer test suite exercises isolated first-install, update, repeat-install, path-validation and rollback cases; it does not operate your real Stream Deck. Generated plugin folders, installers and dependencies are excluded from Git. Publish the installer ZIP, plugin package and `dist/installer-manifest.json` together as release assets.
+The build writes `plugins/windowstoolkit/com.windowstoolkit.core.sdPlugin/`; packaging writes `dist/com.windowstoolkit.core.streamDeckPlugin`. `build:installer` bundles that package, its checksum manifest, the PowerShell installer, CMD launcher and instructions into `dist/WindowsToolkit-Installer-3.1.0.0.zip`. Run `pack` before building the installer. The installer test suite exercises isolated first-install, update, repeat-install, path-validation and rollback cases; it does not operate your real Stream Deck. Generated plugin folders, installers and dependencies are excluded from Git. Publish the installer ZIP, plugin package and `dist/installer-manifest.json` together as release assets.
 
 The browser inspector checks use installed Edge on Windows; elsewhere install Playwright Chromium first. Native helper checks require Windows and use synthetic credentials without opening application login screens.
 
@@ -150,4 +183,10 @@ Development uses Rollup's official WebAssembly build, avoiding its platform-spec
 
 `plugins/windowstoolkit/` contains the plugin source, `shared/` contains artwork, settings and Windows helpers, and `tools/` contains build and verification tools. Compatibility hooks for the optional companion remain in the shared code; its separate plugin implementation is not included here.
 
+The design system lives in `shared/icons.js`, `shared/icons-fx.js`, `shared/brands/brand-keys.js`, `shared/base.ts` and `shared/ui/`. Windows Toolkit is its source of truth: after changing it, run `node tools/sync-design.mjs ../streamdeck_claude ../streamdeck_chatgpt …` to copy it into the companion repositories, or add `--check` to list drift. `node tools/render-looks.mjs` and `node tools/render-profiles.mjs` redraw the README images.
+
 Keep distributed defaults, examples and product copy app-agnostic. Never package personal profiles, credentials, runtime logs or icon caches. Local validation and packaging do not constitute Marketplace approval.
+
+## License
+
+[MIT](LICENSE)
