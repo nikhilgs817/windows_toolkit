@@ -262,6 +262,47 @@ try {
 	desktopSettings({}, "willAppear"); await sleep(150);
 	check("Show Desktop label returns when key reappears", decodeSvg(lastImg("ctx-showdesktop").payload.image).includes("SHOW DESKTOP"));
 
+	// Design system 4.0: plugin default, per-key looks, plugin-wide look, custom colours, press ripple, Windows motion.
+	const styleOf = (ctx) => /data-style="([a-z]+)"/.exec(decodeSvg(lastImg(ctx).payload.image))?.[1];
+	desktopSettings({}); await sleep(200);
+	check("Windows Toolkit keys default to the Vivid look", styleOf("ctx-showdesktop") === "vivid");
+	for (const st of ["glass", "neon", "mono", "pro", "vivid"]) {
+		desktopSettings({ iconStyle: st, animate: false }); await sleep(120);
+		check(`Show Desktop: ${st} look is honored`, styleOf("ctx-showdesktop") === st);
+	}
+	desktopSettings({ iconStyle: "glass", iconColours: ["#123456", "#abcdef"], animate: false }); await sleep(150);
+	check("custom colours replace the theme colours", decodeSvg(lastImg("ctx-showdesktop").payload.image).toLowerCase().includes("#123456"));
+	desktopSettings({ iconStyle: "glass", iconColours: ["red", "#abcdef"], animate: false }); await sleep(150);
+	check("invalid custom colours are ignored safely", styleOf("ctx-showdesktop") === "glass" && !decodeSvg(lastImg("ctx-showdesktop").payload.image).includes("NaN"));
+	desktopSettings({ iconStyle: "glass", iconLabel: "Deployment Pipeline", labelCase: "upper", animate: false }); await sleep(150);
+	{ const svg = decodeSvg(lastImg("ctx-showdesktop").payload.image); check("long labels fit (up to 18 letters) and follow the chosen case", svg.includes("DEPLOYMENT PIPELINE") || svg.includes("DEPLOYMENT PIPELI…") || svg.includes("DEPLOYMENT PIPELIN")); }
+	const pressPayload = (settings) => ({ settings, coordinates: { column: 0, row: 0 }, isInMultiAction: false, state: 0 });
+	desktopSettings({ iconStyle: "vivid", animate: false }); await sleep(150);
+	let before = sent.length;
+	send({ event: "keyDown", action: "com.windowstoolkit.core.showdesktop", context: "ctx-showdesktop", device: "DEV1", payload: pressPayload({ iconStyle: "vivid", animate: false }) });
+	await sleep(250);
+	check("pressing a key plays the ripple, even with animation off", sent.slice(before).some((x) => x.event === "setImage" && x.context === "ctx-showdesktop" && decodeSvg(x.payload.image).includes('data-press="1"')));
+	await sleep(400);
+	check("the ripple ends and the key settles back", !decodeSvg(lastImg("ctx-showdesktop").payload.image).includes('data-press="1"'));
+	desktopSettings({ iconStyle: "vivid", animate: false, pressFx: false }); await sleep(150);
+	before = sent.length;
+	send({ event: "keyDown", action: "com.windowstoolkit.core.showdesktop", context: "ctx-showdesktop", device: "DEV1", payload: pressPayload({ iconStyle: "vivid", animate: false, pressFx: false }) });
+	await sleep(250);
+	check("ripple can be switched off per key", !sent.slice(before).some((x) => x.event === "setImage" && x.context === "ctx-showdesktop" && decodeSvg(x.payload.image).includes('data-press="1"')));
+	// "Use this look on all keys" writes lookDefaults; a key whose own look is older follows it, a newer one keeps its own.
+	desktopSettings({ iconStyle: "neon", lookAt: 1000, animate: false }); await sleep(120);
+	send({ event: "didReceiveGlobalSettings", payload: { settings: { lookDefaults: { iconStyle: "mono", animate: false, at: 2000 } } } });
+	await sleep(250);
+	check("plugin-wide look repaints keys whose own look is older", styleOf("ctx-showdesktop") === "mono");
+	desktopSettings({ iconStyle: "glass", lookAt: 3000, animate: false }); await sleep(150);
+	check("a key changed after the plugin-wide look keeps its own look", styleOf("ctx-showdesktop") === "glass");
+	desktopSettings({ lookAt: 3000 }); await sleep(150);
+	check("a key without its own style uses the plugin-wide look", styleOf("ctx-showdesktop") === "mono");
+	send({ event: "didReceiveGlobalSettings", payload: { settings: {} } });
+	await sleep(150);
+	desktopSettings({}); await sleep(150);
+	check("clearing the plugin-wide look returns keys to Vivid", styleOf("ctx-showdesktop") === "vivid");
+
 	// Custom picture wins
 	const pic = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/iZk9HQAAAABJRU5ErkJggg==";
 	send({ event: "didReceiveSettings", action: "com.windowstoolkit.core.copy", context: "ctx-copy", device: "DEV1", payload: { settings: { iconImage: pic }, coordinates: { column: 0, row: 3 }, controller: "Keypad", isInMultiAction: false, state: 0 } });
@@ -584,6 +625,7 @@ function featureCases() {
 		runcmd: C(cmd("run", "npm test", "C:\\src\\app"), { command: "npm test", folder: "C:\\src\\app" }), terminal: C(cmd("terminal", "C:\\src\\app"), { folder: "C:\\src\\app" }),
 		snippet: C(cmd("type", "Thanks!"), { text: "Thanks!" }), shortcut: C(chordIs("17,16,27"), { keys: "Ctrl+Shift+Esc" }),
 		workspace: C(cmd("url", "https://example.com"), { items: "https://example.com" }), portcheck: C(cmd("url", "http://localhost:3000/")),
+		healthcheck: C(cmd("url", "https://example.com/health"), { url: "example.com/health" }),
 		guid: C((cmds) => cmds[0]?.command === "clip-set" && /^[0-9a-f-]{36}$/.test(cmds[0].args[0])), timestamp: C((cmds) => cmds[0]?.command === "clip-set" && /^\d{4}-\d\d-\d\dT/.test(cmds[0].args[0])),
 		cliptools: C((cmds) => cmds[0]?.command === "clip-get" && cmds[1]?.command === "clip-set", { op: "trim" }), textcase: C((cmds) => cmds[0]?.command === "clip-get" && cmds[1]?.args[0] === "HELLO WORLD"),
 		gamebar: C(chordIs("91,71")), gamemode: C(cmd("gamemode", "toggle")), clip30: C(chordIs("91,18,71")), record: C(chordIs("91,18,82")), gameshot: C(chordIs("91,18,44")), perf: C(chordIs("91,71")),

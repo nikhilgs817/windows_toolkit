@@ -5,7 +5,7 @@ import { readFileSync, statfsSync } from "node:fs";
 import type { JsonObject } from "@elgato/utils";
 import { cpus, freemem, totalmem, uptime } from "node:os";
 import { randomUUID } from "node:crypto";
-import { ToolkitAction, launchApp, looksLikeUrl, log, type Appearance } from "../../../shared/base.js";
+import { DEFAULT_STYLE, ToolkitAction, launchApp, looksLikeUrl, log, type Appearance } from "../../../shared/base.js";
 import { PRESET_ICONS, keySvg, svgDataUri } from "../../../shared/icons.js";
 import { ps, type PsResult } from "../../../shared/ps.js";
 
@@ -95,6 +95,25 @@ export function marketState(s: FeatureSettings, at = new Date()): { state: strin
 	return { state: "closed", text: "", frac: 0 };
 }
 
+/* ---------------- Site Health ---------------- */
+/** Only plain http(s) addresses, so a key can never be pointed at a file or script. */
+export function healthUrl(raw: string): string | undefined {
+	const t = raw.trim();
+	if (!t) return undefined;
+	try { const u = new URL(/^[a-z][a-z0-9+.-]*:/i.test(t) ? t : "https://" + t); return u.protocol === "http:" || u.protocol === "https:" ? u.href : undefined; } catch { return undefined; }
+}
+async function checkHealth(raw: string): Promise<Data> {
+	const url = healthUrl(raw);
+	if (!url) return {};
+	if (process.env.WINTOOLKIT_DRYRUN) return { up: true, code: 200, ms: 42 };
+	const t0 = Date.now();
+	try {
+		const r = await fetch(url, { method: "GET", redirect: "follow", headers: { "cache-control": "no-cache" }, signal: AbortSignal.timeout(8000) });
+		void r.body?.cancel();
+		return { up: r.status < 400, code: r.status, ms: Date.now() - t0 };
+	} catch { return { up: false }; }
+}
+
 /* ---------------- per-key runtime state ---------------- */
 type KeyState = { data: Data; timer?: NodeJS.Timeout; downAt?: number; holdTimer?: NodeJS.Timeout; holdTick?: NodeJS.Timeout; held?: boolean; run?: Record<string, unknown> };
 const str = (v: unknown) => (v === undefined || v === null ? "" : String(v));
@@ -105,7 +124,7 @@ const LIVE: Record<string, number> = {
 	mute: 2000, micmute: 1500, miclevel: 400, output: 5000, input: 5000, appvol: 3000,
 	cpu: 1000, ram: 2000, gpu: 1000, disk: 1000, diskfree: 30000, netdown: 1000, netup: 1000, ping: 3000, wifi: 10000, battery: 30000, uptime: 60000, topapp: 3000, procs: 3000,
 	powerplan: 10000, wifiradio: 10000, bluetooth: 10000, airplane: 10000, gamemode: 10000, brightup: 0, brightdown: 0,
-	toscreen: 60000, timer: 500, stopwatch: 500, pomodoro: 500, clock: 1000, worldclock: 1000, portcheck: 5000, record: 1000, market: 1000, bell: 1000,
+	toscreen: 60000, timer: 500, stopwatch: 500, pomodoro: 500, clock: 1000, worldclock: 1000, portcheck: 5000, healthcheck: 30000, record: 1000, market: 1000, bell: 1000,
 };
 
 export function makeFeatureActions(): (new () => ToolkitAction<FeatureSettings>)[] {
@@ -143,12 +162,12 @@ export function makeFeatureActions(): (new () => ToolkitAction<FeatureSettings>)
 				return undefined;
 			}
 
-			override imageNow(s: FeatureSettings): { image: string; pending?: undefined } {
+			override imageNow(s: FeatureSettings, id?: string): { image: string; pending?: undefined } {
 				const motion = this.motion(s);
-				if (typeof s.iconImage === "string" && s.iconImage.startsWith("data:image/")) return super.imageNow(s) as { image: string };
+				if (typeof s.iconImage === "string" && s.iconImage.startsWith("data:image/")) return super.imageNow(s, id) as { image: string };
 				const look = this.look(s);
-				const style = look.style === "real" ? "neon" : look.style;
-				return { image: svgDataUri(keySvg({ ...look, style, motion, data: this.#keys.get(this.#paintingFor)?.data ?? {} })) };
+				const style = look.style === "real" ? DEFAULT_STYLE : look.style;
+				return { image: svgDataUri(keySvg({ ...look, style, motion, press: this.pressPhase(id ?? this.#paintingFor), data: this.#keys.get(this.#paintingFor)?.data ?? {} })) };
 			}
 			protected override async paint(a: Action<FeatureSettings>, s: FeatureSettings): Promise<void> {
 				this.#paintingFor = a.id;
@@ -312,6 +331,7 @@ async function press(id: string, s: FeatureSettings, k: KeyState): Promise<PsRes
 			return bad ? miss(`${bad} of ${items.length} items did not open`) : ok();
 		}
 		case "portcheck": return ps.run("url", [`http://${v("host", "127.0.0.1") === "127.0.0.1" ? "localhost" : v("host")}:${num(s.port, 3000, 1, 65535)}/`]);
+		case "healthcheck": { const url = healthUrl(v("url")); return url ? ps.run("url", [url]) : miss("Enter an http or https address in the key settings"); }
 		case "guid": return ps.run("clip-set", [randomUUID()]);
 		case "timestamp": {
 			const d = new Date(), f = v("format", "iso");
@@ -412,6 +432,7 @@ async function read(id: string, s: FeatureSettings, k: KeyState): Promise<Data> 
 			const city = v("city") || tz.split("/").pop()!.replace(/_/g, " ").slice(0, 3).toUpperCase();
 			return { text: `${city} ${t}` };
 		}
+		case "healthcheck": return checkHealth(v("url"));
 		case "portcheck": { const port = num(s.port, 3000, 1, 65535); const r = await ps.run("port", [v("host", "127.0.0.1"), String(port)], 3000); return { port, up: r.status === "ok" && r.message === "up" }; }
 		case "record": return k.data.on && k.run ? { text: mmss(Date.now() - Number(k.run.since)) } : {};
 		case "market": return marketState(s);
