@@ -129,12 +129,12 @@ try {
 		await page.goto(`http://127.0.0.1:${server.address().port}/pi.html`);
 		await page.evaluate((id) => window.connectElgatoStreamDeckSocket(12345, "test-inspector", "registerPropertyInspector", "{}", JSON.stringify({ action: "com.windowstoolkit.core." + id, payload: { settings: {} } })), id);
 		await page.waitForSelector("#motionRow", { state: "visible" });
-		assert.equal(await page.locator("#animate").isChecked(), true);
+		assert.equal(await page.locator("#motionStyle").inputValue(), "loop");
 		const firstPhase = await page.locator('#preview rect[stroke-dashoffset]').getAttribute("stroke-dashoffset");
 		await page.waitForFunction((first) => document.querySelector('#preview rect[stroke-dashoffset]')?.getAttribute("stroke-dashoffset") !== first, firstPhase);
 		if (id !== "monitorcontrol") await page.locator('#styleSeg button[data-style="vivid"]').click();
 		else {
-			await page.locator('#animate').uncheck();
+			await page.locator('#motionStyle').selectOption('still');
 			await page.waitForFunction(() => window.savedSettings.at(-1)?.animate === false);
 			assert.equal(await page.locator('#preview rect[stroke-dashoffset]').count(), 0);
 			console.log("PASS  Monitor Control animates with its state colours and honors animation off");
@@ -146,7 +146,7 @@ try {
 		await page.locator('#styleSeg button[data-style="neon"]').click();
 		await page.waitForFunction(() => window.savedSettings.at(-1)?.iconStyle === "neon");
 		if (["screenshot", "showdesktop"].includes(id)) await page.screenshot({ path: join(output, `${id}-colourful-settings.png`), fullPage: true });
-		await page.locator('#animate').uncheck();
+		await page.locator('#motionStyle').selectOption('still');
 		await page.waitForFunction(() => window.savedSettings.at(-1)?.animate === false);
 		assert.equal(await page.locator('#preview rect[stroke-dashoffset]').count(), 0);
 		console.log(`PASS  ${id}: live animation, Colourful/Vivid choices, and animation switch work`);
@@ -238,7 +238,7 @@ try {
 	const floating = await page.locator('#preview image').getAttribute('transform');
 	await page.waitForFunction((before) => document.querySelector('#preview image')?.getAttribute('transform') !== before, floating);
 	assert.match(await page.locator('#preview image').getAttribute('href'), /^data:image\/png/);
-	await page.locator('#animate').uncheck();
+	await page.locator('#motionStyle').selectOption('still');
 	assert.equal(await page.locator('#preview image').getAttribute('transform'), null);
 	console.log("PASS  real app icons retain their image and animate in the inspector; animation off stops the float");
 	const custom = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAFklEQVR4nGP4z8DwnwEJMDIwMDAwAAAvAQQAJ8TtbQAAAABJRU5ErkJggg==';
@@ -246,16 +246,16 @@ try {
 	assert.equal(await page.locator('#preview image').getAttribute('href'), custom);
 	assert.equal(await page.locator('#preview image').getAttribute('width'), '144');
 	assert.equal(await page.locator('#preview rect[stroke-dashoffset]').count(), 1);
-	await page.locator('#animate').uncheck();
+	await page.locator('#motionStyle').selectOption('still');
 	assert.equal(await page.locator('#preview img').getAttribute('src'), custom);
 	console.log("PASS  custom-picture previews keep the full original picture with a moving frame, or the exact still picture when paused");
 	await page.goto(`http://127.0.0.1:${server.address().port}/pi.html`);
 	await page.evaluate(() => window.connectElgatoStreamDeckSocket(12345, 'test-inspector', 'registerPropertyInspector', '{}', JSON.stringify({ action: 'com.windowstoolkit.vscode.terminal', payload: { settings: {} } })));
 	await page.waitForSelector('#motionRow', { state: 'visible' });
-	assert.equal(await page.locator('#styleSeg button[data-style="pro"]').getAttribute('class'), 'on');
+	assert.equal(await page.locator('#styleSeg button[data-style="glass"]').getAttribute('class'), 'on');
 	const proPhase = await page.locator('#preview rect[stroke-dashoffset]').getAttribute('stroke-dashoffset');
 	await page.waitForFunction((before) => document.querySelector('#preview rect[stroke-dashoffset]')?.getAttribute('stroke-dashoffset') !== before, proPhase);
-	console.log("PASS  companion Pro previews animate with the same per-key controls");
+	console.log("PASS  companion Glass (default) previews animate with the same per-key controls");
 	await page.goto(`http://127.0.0.1:${server.address().port}/pi.html`);
 	await page.evaluate(() => window.connectElgatoStreamDeckSocket(12345, 'test-inspector', 'registerPropertyInspector', '{}', JSON.stringify({ action: 'com.windowstoolkit.core.websitefolder', payload: { settings: {} } })));
 	await page.waitForSelector('#sec-websites', { state: 'visible' });
