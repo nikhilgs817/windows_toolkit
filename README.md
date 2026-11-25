@@ -97,11 +97,15 @@ Launcher gestures select monitor 1 with a tap, monitor 2 with a double-tap and m
 
 ![Website Folder settings](docs/images/website-folder-settings.png)
 
+*These settings screenshots are from before 3.1. The Look section now also has Animation, Glow, Custom colours and Use this look on all keys; see [Appearance](#appearance).*
+
 ## App companion profiles
 
 Optional companion plugins provide app-specific controls for [VS Code](https://github.com/nikhilgs817/streamdeck_vscode), [ChatGPT](https://github.com/nikhilgs817/streamdeck_chatgpt), [Claude](https://github.com/nikhilgs817/streamdeck_claude), [thinkorswim](https://github.com/nikhilgs817/streamdeck_thinkorswim) and [Fidelity Trader+](https://github.com/nikhilgs817/streamdeck_fidelity_trader_plus) and [TradingView](https://github.com/nikhilgs817/streamdeck_tradingview). Install the desired companion and accept its editable profile. Select that app with Open App and leave Switch keys enabled.
 
 The deck follows the foreground app, whether you opened it from Apps or switched to it elsewhere. Direct app changes restore the main profile before showing the next companion. Back returns to the main keys and prevents an immediate switch back until you leave and return to the app. The Back key in each companion offers Follow focus. Companion profiles share animated looks and colour themes; they are separate plugins and repositories.
+
+Two more plugins share the same design and settings panel but work on their own, without Windows Toolkit: [DevOps Deck](https://github.com/nikhilgs817/streamdeck_devops) (live Jenkins, GitLab, GitHub Actions, SonarQube, Ansible, Kubernetes and CloudWatch status) and [Learning Deck](https://github.com/nikhilgs817/streamdeck_niharika) (maths, spelling, reading and kid-safe learning sites for children).
 
 App recognition uses process names and, for packaged apps and thinkorswim's Java runtime, executable paths. A local named pipe coordinates profile changes. No app content, credentials or account data crosses that channel. Only installed, connected companions can be selected.
 
@@ -115,7 +119,7 @@ Autofill opens the selected app, verifies its foreground executable path or appl
 
 Compatibility depends on the app exposing native login controls through Windows accessibility. Embedded web forms, separate login processes, elevated apps and custom controls may not support filling. Ambiguous fields, an unverified app or a focus change stop filling. Commands and links can launch apps, but autofill requires a verifiable installed app entry or full executable path. Multifactor authentication remains in the app.
 
-![Open App credentials settings with a sample app](docs/images/open-app-credentials-settings.png)
+![Open App credentials settings with a sample app (from before 3.1)](docs/images/open-app-credentials-settings.png)
 
 ## Appearance
 
@@ -124,13 +128,14 @@ Select a key and open **Look**:
 | Setting | Choices |
 |---|---|
 | **Style** | Vivid (default), Glass, Neon, Mono, Pro, or the real App / Site / Folder icon where there is one |
-| **Label** | Your own text (up to 18 letters, fitted to the key), Auto / Title Case / UPPER CASE, or hidden |
-| **Picture** | Upload your own picture; it keeps its composition inside an animated frame |
+| **Label** | Your own text (up to 18 letters, fitted to the key), Auto case / Title Case / UPPER CASE, or **Hide** |
+| **Picture** | **Use my own picture…** (PNG, JPEG, GIF, SVG, WebP or BMP); it keeps its composition inside an animated frame. **Remove picture** goes back to the icon |
 | **Animation** | Full, Glow only, Icon only or Still, at Slow, Calm (default), Normal or Fast |
-| **Glow** | Subtle, Normal or Bold, and a ripple when pressed |
-| **Colour** | 29 themes, including Sunset, Tropical, Electric, Cosmic, Peach and Lemonade, or any two colours of your own |
+| **Glow** | Subtle, Normal or Bold, plus **Ripple when pressed** |
+| **Colour** | 42 themes, including Sunset, Tropical, Electric, Cosmic, Peach and Lemonade, or any two colours of your own with **Use these colours** (**Back to theme** undoes it) |
+| **Icon** | Swap the drawing for any of 90+ icons |
 
-**Use this look on all keys** copies the style, animation, glow, label case and ripple to every key of the plugin. Colours, icons and labels stay as they are, and app, site and folder keys keep their real icons. Change any key afterwards to give it its own look. **Reset look** returns a key to the defaults.
+**Use this look on all keys** copies the style, animation, glow, label case and ripple to every key of the plugin. Colours, icons and labels stay as they are, and app, site and folder keys keep their real icons. Change any key afterwards to give it its own look. **Reset look** (under the preview) returns a key to the defaults.
 
 Every action has its own motion: folders open gently, app tiles move, volume waves pulse and documents shift on Copy and Paste. Real icons float subtly; labels stay still. Monitor Control keeps its red and green state colours. A shared 12 fps clock draws only visible keys, skips busy renders and stops when nothing is animated. Keys stay still while Windows **Animation effects** is off, unless you untick **Keep keys still when Windows animations are off**.
 
@@ -142,6 +147,10 @@ Existing native Stream Deck shortcuts can use exported animated GIF artwork. The
 - If autofill cannot recognize a form, enter the credentials in the app. The password can still be stored and viewed from the key settings.
 - If Monitor Control shows SELECT, choose a monitor. NOT FOUND means the selected physical screen is unavailable; the key never falls back to a different screen.
 - Some monitors disappear from Windows during deep sleep. Disable that monitor option, disable **Sleep the monitor** on the key, or use the monitor's power button to wake it.
+- **Keys don't move:** Windows **Animation effects** is off (Settings › Accessibility › Visual effects), or the key's **Animation** is Still. Turn either back on, or untick **Keep keys still when Windows animations are off**.
+- **One key keeps its old look after "Use this look on all keys":** colours, icons, labels, pictures and real app/site/folder icons are kept on purpose. Select the key and choose **Reset look**.
+- **Site Health shows DOWN:** the address didn't answer within 8 seconds or replied 400 or above. Press the key to open the address in your browser and check it. It must start with http or https.
+- **Port Check shows down:** nothing is listening on that port on this PC; start your local server.
 - Managed PCs may block the hidden PowerShell worker used for Windows integration.
 - Logs are under `%APPDATA%\Elgato\StreamDeck\Plugins\com.windowstoolkit.core.sdPlugin\logs`.
 
@@ -149,7 +158,7 @@ Monitor labels use Windows display-topology metadata. This resolves source-numbe
 
 ## Data and connections
 
-Credentials and Windows controls run locally. Website icon retrieval sends the website hostname to a public favicon service and may fetch an icon directly from that website; results are cached. Opening a website or app uses the destination you configure. The plugin does not send credentials to an external service.
+Credentials and Windows controls run locally. Site Health requests the address you set every 30 seconds, Ping contacts the host you set, and Port Check only looks at this PC. Website icon retrieval sends the website hostname to a public favicon service and may fetch an icon directly from that website; results are cached. Opening a website or app uses the destination you configure. The plugin does not send credentials to an external service.
 
 The installer downloads the matching public release from GitHub when its package is not included locally, and may use Windows Package Manager for the official Elgato software prerequisite. Installer backups and logs stay on your PC and are not uploaded.
 
